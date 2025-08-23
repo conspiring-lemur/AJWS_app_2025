@@ -11,6 +11,7 @@ library(stringr)
 library(leaflet)
 library(leaflet.minicharts)
 
+
 # AJWS branding colors
 ajws_primary <- "#0B5C5C"
 ajws_accent  <- "#A46A2B"
