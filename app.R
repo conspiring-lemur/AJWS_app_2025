@@ -11,7 +11,6 @@ library(stringr)
 library(leaflet)
 library(leaflet.minicharts)
 
-#test again
 
 
 # AJWS branding colors
