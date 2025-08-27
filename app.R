@@ -11,7 +11,8 @@ library(stringr)
 library(leaflet)
 library(leaflet.minicharts)
 
-#test on ipad test # test on desktop
+#test on ipad test # test on desktop #test on iphone
+
 
 # AJWS branding colors
 ajws_primary <- "#0B5C5C"
