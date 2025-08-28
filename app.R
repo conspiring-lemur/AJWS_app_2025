@@ -335,7 +335,8 @@ ui <- page_sidebar(
       actionButton("go_omf_longitudinal", "📈 OMF Longitudinal", class = "btn btn-outline-primary"),
       actionButton("go_gms_dashboard", "📊 GMS Dashboard", class = "btn btn-outline-primary"),
       actionButton("go_gms_map", "🗺️ GMS Mapping", class = "btn btn-outline-primary"),
-      actionButton("go_gms_data_explorer", "🧭 GMS Data Explorer", class = "btn btn-outline-primary")
+      actionButton("go_gms_data_explorer", "🧭 GMS Data Explorer", class = "btn btn-outline-primary"),
+      actionButton("go_gms_longitudinal", "📈 GMS Longitudinal", class = "btn btn-outline-primary")
     )
   
   ),
@@ -352,6 +353,7 @@ server <- function(input, output, session) {
   observeEvent(input$go_gms_dashboard, current_page("GMS Dashboard"))
   observeEvent(input$go_gms_map, current_page("GMS Mapping"))
   observeEvent(input$go_gms_data_explorer, current_page("GMS Data Explorer"))
+  observeEvent(input$go_gms_longitudinal, current_page("GMS Longitudinal Data"))
   
   # Reactive GMS dataset
   gms_cleaned <- reactive({
@@ -793,7 +795,11 @@ server <- function(input, output, session) {
                                 )),
                               column(
                                 width = 9,
-                                leafletOutput("asia_map", height = "600px")))),
+                                leafletOutput("asia_map", height = "600px"),
+                                br(),
+                                plotlyOutput("asia_pie"),
+                                br(),
+                                dataTableOutput("asia_dat")))),
                    tabPanel("Latin America and the Caribbean", 
                             fluidRow(
                               column(
@@ -808,7 +814,11 @@ server <- function(input, output, session) {
                                 )),
                               column(
                                 width = 9,
-                                leafletOutput("latam_map", height = "600px"))))
+                                leafletOutput("latam_map", height = "600px"),
+                                br(),
+                                plotlyOutput("latam_pie"),
+                                br(),
+                                dataTableOutput("latam_dat")))),
                  )
              )
            )
@@ -840,6 +850,24 @@ server <- function(input, output, session) {
                  h3("GMS Data Explorer 🧭"),
                  width = 9,
                  DTOutput("gms_explorer_table")
+               )
+             )
+           ),
+           "GMS Longitudinal Data" = fluidPage(
+             #titlePanel("GMS Data Explorer 🧭"),
+             fluidRow(
+               column(
+                 width = 3,
+                 br(),
+                 wellPanel(
+                   h5("📌 Notes"),
+                   p("Explore Grants & Grantees Your Way"),
+                  )
+               ),
+               column(
+                 h3("GMS Longitudinal Data 📈"),
+                 width = 9,
+                 p("🚧 COMING SOON! 🚧")
                )
              )
            )
@@ -1178,6 +1206,8 @@ server <- function(input, output, session) {
   
   grant_dist_dat <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "grant_distribution")
   
+  grant_dist_dat$Country <- grant_dist_dat$Country %>% recode("Asia Cross-regional" = "Asia Cross-Regional")
+  
   custom_colors <- c("#BB9BFF", "#FFFF4C", "#B1D850", "#63C1FC", "#0B5C5C", "#A46A2B")
   
   africa_dist_dat <- grant_dist_dat %>% filter(Country %in% c("Kenya", "Uganda", "Liberia", "Senegal", "DRC", "Africa Cross-Regional"))
@@ -1289,6 +1319,29 @@ server <- function(input, output, session) {
       )
   })
   
+  asia_dist_dat <- grant_dist_dat %>% filter(Country %in% c("Bangladesh", "Burma", "Cambodia", "India", "Sri Lanka", "Thailand", "Asia Cross-Regional"))
+  asia_dist_dat
+  output$asia_pie <- renderPlotly({ 
+    
+    plot_ly(asia_dist_dat, labels = ~Country, values = ~Dollars, type = 'pie',
+            marker = list(colors = custom_colors,
+                          line = list(color = '#FFFFFF', width = 1))) %>%
+      layout(
+        title = 'Asia Grant Distribution')# Optional: add white borders
+    
+  })
+  
+  
+  asia_datatable <- asia_dist_dat 
+  
+  asia_datatable$Dollars <- asia_datatable$Dollars %>% dollar()
+  
+  output$asia_dat <- renderDataTable({ DT::datatable(asia_datatable,
+                                                       options = list(
+                                                         dom = 't',
+                                                         ordering = TRUE,
+                                                         pageLength = nrow(asia_datatable)))})
+  
   # Data frame of values
  
   latam_countries <- c("DOMINICAN REPUBLIC", "EL SALVADOR", "GUATEMALA", "HAITI", "MEXICO", "NICARAGUA")
@@ -1375,6 +1428,29 @@ server <- function(input, output, session) {
         )
       )
   })
+  
+  latam_dist_dat <- grant_dist_dat %>% filter(Country %in% c("Dominican Republic", "El Salvador", "Guatemala", "Haiti", "Mexico", "Nicargua", "LatAm Cross-Regional"))
+  
+  output$latam_pie <- renderPlotly({ 
+    
+    plot_ly(latam_dist_dat, labels = ~Country, values = ~Dollars, type = 'pie',
+            marker = list(colors = custom_colors,
+                          line = list(color = '#FFFFFF', width = 1))) %>%
+      layout(
+        title = 'latam Grant Distribution')# Optional: add white borders
+    
+  })
+  
+  
+  latam_datatable <- latam_dist_dat 
+  
+  latam_datatable$Dollars <- latam_datatable$Dollars %>% dollar()
+  
+  output$latam_dat <- renderDataTable({ DT::datatable(latam_datatable,
+                                                       options = list(
+                                                         dom = 't',
+                                                         ordering = TRUE,
+                                                         pageLength = nrow(latam_datatable)))})
   
   
   ### RENDER OMF DATA EXPLORER TABLE ###
