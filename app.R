@@ -716,17 +716,54 @@ server <- function(input, output, session) {
            ),
            "GMS Mapping" = fluidPage(
              fluidRow(
-               column(
                  h3("GMS Mapping 🗺"),
-                 width = 12,
                  tabsetPanel(
                    id = "gms_map_tabs",
-                   tabPanel("World Map", leafletOutput("world_map", height = "600px")),
-                   tabPanel("Africa", leafletOutput("africa_map", height = "600px")),
-                   tabPanel("Asia", leafletOutput("asia_map", height = "600px")),
-                   tabPanel("Latin America and the Caribbean", leafletOutput("latam_map", height = "600px"))
+                   tabPanel("World Map", 
+                            fluidRow(
+                            column(
+                              width = 3,
+                              wellPanel(
+                                h5("📌 Notes"),
+                                p("This is a placeholder for WORLD MAPS contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+                              )),
+                              column(
+                                width = 9,
+                              leafletOutput("world_map", height = "600px")))),
+                   tabPanel("Africa", 
+                            fluidRow(
+                              column(
+                                width = 3,
+                                wellPanel(
+                                  h5("📌 Notes"),
+                                  p("This is a placeholder for AFRICA MAPS contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+                                )),
+                              column(
+                                width = 9,
+                                leafletOutput("africa_map", height = "600px")))),
+                   tabPanel("Asia", 
+                            fluidRow(
+                              column(
+                                width = 3,
+                                wellPanel(
+                                  h5("📌 Notes"),
+                                  p("This is a placeholder for ASIA MAPS contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+                                )),
+                              column(
+                                width = 9,
+                                leafletOutput("asia_map", height = "600px")))),
+                   tabPanel("Latin America and the Caribbean", 
+                            fluidRow(
+                              column(
+                                width = 3,
+                                wellPanel(
+                                  h5("📌 Notes"),
+                                  p("This is a placeholder for LATAM MAPS contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+                                )),
+                              column(
+                                width = 9,
+                                leafletOutput("latam_map", height = "600px"))))
                  )
-               )
              )
            )
            ,
@@ -948,7 +985,7 @@ server <- function(input, output, session) {
     sizes <- rep(60, length(totals))
   } else {
     norm_totals <- (totals - min(totals)) / (max(totals) - min(totals))
-    sizes <- 60 + norm_totals * (80 - 30)
+    sizes <- 30 + norm_totals * (80 - 30)
   }
   
   output$world_map <- renderLeaflet({
@@ -1031,7 +1068,7 @@ server <- function(input, output, session) {
   # Normalize pie size based on Total
   totals_africa <- plot_data_africa$Total
   norm_totals_africa <- (totals_africa - min(totals_africa)) / (max(totals_africa) - min(totals_africa))
-  sizes_africa <- 60 + norm_totals_africa * (80 - 30)
+  sizes_africa <- 30 + norm_totals_africa * (80 - 30)
   
   output$africa_map <- renderLeaflet({
     leaflet() %>%
@@ -1118,7 +1155,7 @@ server <- function(input, output, session) {
   # Normalize pie size based on Total
   totals_asia <- plot_data_asia$Total
   norm_totals_asia <- (totals_asia - min(totals_asia)) / (max(totals_asia) - min(totals_asia))
-  sizes_asia <- 60 + norm_totals_asia * (80 - 30)
+  sizes_asia <- 30 + norm_totals_asia * (80 - 30)
   
   output$asia_map <- renderLeaflet({
     leaflet() %>%
@@ -1205,7 +1242,7 @@ server <- function(input, output, session) {
   # Normalize pie size based on Total
   totals_latam <- plot_data_latam$Total
   norm_totals_latam <- (totals_latam - min(totals_latam)) / (max(totals_latam) - min(totals_latam))
-  sizes_latam <- 60 + norm_totals_latam * (80 - 30)
+  sizes_latam <- 30 + norm_totals_latam * (80 - 30)
   
   output$latam_map <- renderLeaflet({
     leaflet() %>%
