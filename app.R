@@ -697,7 +697,7 @@ server <- function(input, output, session) {
                br(),
                wellPanel(
                  h5("📌 Notes"),
-                 p("This is a placeholder for any contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+                 p("This is a placeholder for OMF Longitudinal contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
                )
                ),
                column(
