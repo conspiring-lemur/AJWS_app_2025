@@ -636,7 +636,19 @@ server <- function(input, output, session) {
                  br(),
                  wellPanel(
                    h5("📌 Notes"),
-                   p("This is a placeholder for any contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+                   p("Context & Reporting Factors
+
+Fewer countries/strategies after AJWS restructuring.
+
+Shrinking civic space and U.S. funding cuts especially affecting SHR & climate justice.
+
+LPMT reporting narrowed to major legislative changes.
+
+Key Insights from Heatmap
+
+21.4% major progress occurred in somewhat unfavorable contexts — showing resilience despite structural barriers.
+
+14.3% moderate and 14.3% minor progress also advanced in unfavorable conditions, reflecting strong adaptation, long-term accompaniment, and embedded advocacy strategies.")
                  )
                ),
                column(
@@ -668,9 +680,13 @@ server <- function(input, output, session) {
                br(),
                wellPanel(
                  h5("📌 Notes"),
-                 p("This is a placeholder for any contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+                 p("Explore Outcomes & Milestones Your Way"),
+                 p(HTML("<ul>
+                         <li>Comprehensive View: Lists all AJWS outcomes and milestones across the 2023–2026 strategy period, giving visibility into the scope of strategy implementation.</li>
+                         <li>Custom Filters: Users can sort by region, issue area, or grantee issue area to surface the outcomes and milestones most relevant to their interests.</li>
+                         <li>Focused Learning Tool: Filtering enables review of the types of outcomes and milestones AJWS is tracking, supporting reflection on areas of strategic emphasis without displaying progress data.</li></ui>")
                )
-               ),
+               )),
                column(
                  h3("OMF Data Explorer 🧭"),
                  width = 9,
@@ -697,7 +713,13 @@ server <- function(input, output, session) {
                br(),
                wellPanel(
                  h5("📌 Notes"),
-                 p("This is a placeholder for OMF Longitudinal contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+                 p("Longitudinal Outcomes: Early Strategy Signals
+
+Decline across all categories: Outcome updates fell from 2023 to 2024, with minor progress showing the steepest drop.
+
+Context matters: Shifts align with U.S. funding cuts and AJWS restructuring that reduced countries and strategies.
+
+Early insights: Trends help flag momentum, reporting gaps, and areas where strategies may need adjustment.")
                )
                ),
                column(
@@ -710,7 +732,11 @@ server <- function(input, output, session) {
            "GMS Dashboard" = fluidRow(
              column(12,
                     h3("AJWS Grants by the Numbers"),
-                    p("Summary of grantee characteristics across issue areas based on GMS data."),
+                    p("100% of grantees received accompaniment support, reflecting AJWS’s commitment to capacity-building.
+
+Advocacy & coalitions central: 79–95% engaged in advocacy; 63–90% in coalitions, up to 56% in leadership.
+
+Grassroots focus: Majority are local or new partners (up to 61%), even amid shrinking civic space."),
                     DTOutput("gms_dashboard")
              )
            ),
@@ -725,7 +751,21 @@ server <- function(input, output, session) {
                               width = 3,
                               wellPanel(
                                 h5("📌 Notes"),
-                                p("This is a placeholder for WORLD MAPS contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+                                p("Regional Shifts & Smaller Average Grants
+
+$17.2M | 649 grants | 498 grantees (down from 511 in FY2024)
+
+Asia steady (37%), Africa up (26% from 24%), Americas down (29% from 31%), cross-regional stable at 8%
+
+Average grant size down: $26,504 vs. $28,023 in FY2024
+
+📌 Context Shaping FY2025 Grantmaking
+
+AJWS restructuring reduced active countries & strategies
+
+Shrinking civic space constrained partner operations
+
+U.S. government funding cuts hit human rights & climate justice partners hardest")
                               )),
                               column(
                                 width = 9,
@@ -736,7 +776,15 @@ server <- function(input, output, session) {
                                 width = 3,
                                 wellPanel(
                                   h5("📌 Notes"),
-                                  p("This is a placeholder for AFRICA MAPS contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+                                  p("Africa: Growth with Shifting Country Focus
+
+$4.5M across 4 countries (up from $4.2M across 6 in FY2024)
+
+Kenya 34% (down from 38%) | Uganda 31% (up from 30%)
+
+Average grant size down: $26,636 vs. $30,303 in FY2024
+
+Context: AJWS phased out DRC & Liberia, providing tie-off grants as part of strategic restructuring")
                                 )),
                               column(
                                 width = 9,
@@ -751,7 +799,15 @@ server <- function(input, output, session) {
                                 width = 3,
                                 wellPanel(
                                   h5("📌 Notes"),
-                                  p("This is a placeholder for ASIA MAPS contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+                                  p("Asia: Shifts in Country Allocation
+
+$6.5M in FY2025 (down from $6.7M in FY2024)
+
+India 27% (down sharply from 42% with conclusion of Kendeda ECM grants)
+
+Burma 22% (up from 18%) | Thailand 19% (up from 16%)
+
+Average grant size up: $27,284 vs. $25,161 in FY2024")
                                 )),
                               column(
                                 width = 9,
@@ -762,7 +818,13 @@ server <- function(input, output, session) {
                                 width = 3,
                                 wellPanel(
                                   h5("📌 Notes"),
-                                  p("This is a placeholder for LATAM MAPS contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+                                  p("Latin America & Caribbean: Slight Decline in Grantmaking
+
+$4.9M across 6 countries (down from $5.2M in FY2024)
+
+Haiti 26% (down from 34%) | Dominican Republic 18% | Mexico 15% (both steady from FY2024)
+
+Average grant size down: $24,846 vs. $26,223 in FY2024")
                                 )),
                               column(
                                 width = 9,
@@ -787,7 +849,13 @@ server <- function(input, output, session) {
                br(),
                wellPanel(
                  h5("📌 Notes"),
-                 p("This is a placeholder for any contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+                 p("Explore Grants & Grantees Your Way
+
+Comprehensive View: Lists all AJWS grants and grantees across the 2023–2026 strategy period, providing visibility into the breadth of AJWS’s support.
+
+Custom Filters: Users can sort by region, issue area, or grantee issue area to surface the types of grants and grantees most relevant to their interests.
+
+Focused Learning Tool: Filtering enables review of the types of grants and grantees AJWS supports, helping identify areas of emphasis and coverage without displaying progress data.")
                )
              ),
              column(
