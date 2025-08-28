@@ -740,7 +740,11 @@ server <- function(input, output, session) {
                                 )),
                               column(
                                 width = 9,
-                                leafletOutput("africa_map", height = "600px")))),
+                                leafletOutput("africa_map", height = "600px"),
+                                br(),
+                                plotlyOutput("africa_pie"),
+                                br(),
+                                dataTableOutput("africa_dat")))),
                    tabPanel("Asia", 
                             fluidRow(
                               column(
@@ -1126,6 +1130,32 @@ server <- function(input, output, session) {
       )
     })
   
+  grant_dist_dat <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "grant_distribution")
+  
+  custom_colors <- c("#BB9BFF", "#FFFF4C", "#B1D850", "#63C1FC", "#0B5C5C", "#A46A2B")
+  
+  africa_dist_dat <- grant_dist_dat %>% filter(Country %in% c("Kenya", "Uganda", "Liberia", "Senegal", "DRC", "Africa Cross-Regional"))
+  
+  output$africa_pie <- renderPlotly({ 
+    
+    plot_ly(africa_dist_dat, labels = ~Country, values = ~Dollars, type = 'pie',
+                        marker = list(colors = custom_colors,
+                                      line = list(color = '#FFFFFF', width = 1))) %>%
+    layout(
+      title = 'Africa Grant Distribution')# Optional: add white borders
+  
+  })
+  
+  
+  africa_datatable <- africa_dist_dat 
+  
+  africa_datatable$Dollars <- africa_datatable$Dollars %>% dollar()
+  
+  output$africa_dat <- renderDataTable({ DT::datatable(africa_datatable,
+                options = list(
+                  dom = 't',
+                  ordering = TRUE,
+                  pageLength = nrow(africa_datatable)))})
   
   # Data frame of values
   
