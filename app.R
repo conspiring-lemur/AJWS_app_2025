@@ -420,7 +420,18 @@ server <- function(input, output, session) {
       filter(Update.Type %in% c("Milestone", "Outcome")) %>%
       mutate(
         CorePillar = ifelse(Update.Type == "Outcome", Outcome.Category, Milestone.Category),
-        ThematicArea = OMF.Strategy,
+        ThematicArea = case_when(
+          str_starts(OMF.Strategy, "Advocacy") ~ "Advocacy",
+          str_starts(OMF.Strategy, "CPR - Thematic") ~ "CPR - Thematic",
+          str_starts(OMF.Strategy, "CPR") ~ "CPR",
+          str_starts(OMF.Strategy, "Humanitarian Response") ~ "Humanitarian Response",
+          str_starts(OMF.Strategy, "LWCJ - Thematic") ~ "LWCJ - Thematic",
+          str_starts(OMF.Strategy, "LWCJ") ~ "LWCJ",
+          str_starts(OMF.Strategy, "SHR - Thematic") ~ "SHR - Thematic",
+          str_detect(OMF.Strategy, "SHR.*non ECM") ~ "SHR (non ECM)",
+          str_starts(OMF.Strategy, "SHR") ~ "SHR",
+          TRUE ~ "Other"
+        ),
         Country = OMF.Country,
         Progress = Change,
         Year = Update.Year
@@ -526,7 +537,18 @@ server <- function(input, output, session) {
           Update.Type == "Milestone" ~ Milestone.Category,
           TRUE ~ NA_character_
         ),
-        ThematicArea = OMF.Strategy,
+        ThematicArea = case_when(
+    str_starts(OMF.Strategy, "Advocacy") ~ "Advocacy",
+    str_starts(OMF.Strategy, "CPR - Thematic") ~ "CPR - Thematic",
+    str_starts(OMF.Strategy, "CPR") ~ "CPR",
+    str_starts(OMF.Strategy, "Humanitarian Response") ~ "Humanitarian Response",
+    str_starts(OMF.Strategy, "LWCJ - Thematic") ~ "LWCJ - Thematic",
+    str_starts(OMF.Strategy, "LWCJ") ~ "LWCJ",
+    str_starts(OMF.Strategy, "SHR - Thematic") ~ "SHR - Thematic",
+    str_detect(OMF.Strategy, "SHR.*non ECM") ~ "SHR (non ECM)",
+    str_starts(OMF.Strategy, "SHR") ~ "SHR",
+    TRUE ~ "Other"
+  ),
         Progress = Change,
         Context = Context,
         RecordType = Update.Type,
@@ -567,10 +589,21 @@ server <- function(input, output, session) {
     
     
     all_themes <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "OMF") %>%
-      pull(OMF.Strategy) %>%
+      mutate(OMF.Strategy = case_when(
+        str_starts(OMF.Strategy, "Advocacy") ~ "Advocacy",
+        str_starts(OMF.Strategy, "CPR - Thematic") ~ "CPR - Thematic",
+        str_starts(OMF.Strategy, "CPR") ~ "CPR",
+        str_starts(OMF.Strategy, "Humanitarian Response") ~ "Humanitarian Response",
+        str_starts(OMF.Strategy, "LWCJ - Thematic") ~ "LWCJ - Thematic",
+        str_starts(OMF.Strategy, "LWCJ") ~ "LWCJ",
+        str_starts(OMF.Strategy, "SHR - Thematic") ~ "SHR - Thematic",
+        str_detect(OMF.Strategy, "SHR.*non ECM") ~ "SHR (non ECM)",
+        str_starts(OMF.Strategy, "SHR") ~ "SHR",
+        TRUE ~ "Other"
+      )) %>%
+      select(OMF.Strategy) %>%
       unique() %>%
-      na.omit() %>%
-      sort()
+      arrange(OMF.Strategy)
     
     theme_choices <- c("All Thematic Areas", all_themes)
   
@@ -588,7 +621,7 @@ server <- function(input, output, session) {
       updateSelectInput(session, "omf_record_type", choices = c("All", sort(unique(df$RecordType))))
       updateSelectInput(session, "omf_core_pillar", choices = c("All", sort(unique(df$CorePillar))))
       updateSelectInput(session, "omf_thematic_area", choices = c("All", sort(unique(df$ThematicArea))))
-      updateSelectInput(session, "omf_country", choices = c("All", sort(unique(df$Country))))
+      updateSelectInput(session, "omf_country", choices = c("All", sort(all_countries)))
       updateSelectInput(session, "omf_progress", choices = c("All", progress_levels))
       updateSelectInput(session, "omf_context", choices = c("All", context_levels))
     })
@@ -704,7 +737,7 @@ server <- function(input, output, session) {
                  selectInput("omf_record_type", "Record Type", choices = NULL),
                  selectInput("omf_core_pillar", "Core Pillar", choices = NULL),
                  selectInput("omf_thematic_area", "Thematic Area", choices = NULL),
-                 selectInput("omf_country", "Country", choices = NULL),
+                 selectInput("omf_country", "Country", choices = country_choices),
                  selectInput("omf_progress", "Progress", choices = NULL),
                  selectInput("omf_context", "Context", choices = NULL),
                  actionButton("reset_omf_explorer", "Reset Filters", class = "btn btn-warning")
@@ -1496,7 +1529,18 @@ server <- function(input, output, session) {
         Number = ifelse(Update.Type == "Outcome", Outcome.Number, Milestone.Number),
         Name = ifelse(Update.Type == "Outcome", Outcome.Name, Milestone.Name),
         CorePillar = ifelse(Update.Type == "Outcome", Outcome.Category, Milestone.Category),
-        ThematicArea = OMF.Strategy,
+        ThematicArea = case_when(
+          str_starts(OMF.Strategy, "Advocacy") ~ "Advocacy",
+          str_starts(OMF.Strategy, "CPR - Thematic") ~ "CPR - Thematic",
+          str_starts(OMF.Strategy, "CPR") ~ "CPR",
+          str_starts(OMF.Strategy, "Humanitarian Response") ~ "Humanitarian Response",
+          str_starts(OMF.Strategy, "LWCJ - Thematic") ~ "LWCJ - Thematic",
+          str_starts(OMF.Strategy, "LWCJ") ~ "LWCJ",
+          str_starts(OMF.Strategy, "SHR - Thematic") ~ "SHR - Thematic",
+          str_detect(OMF.Strategy, "SHR.*non ECM") ~ "SHR (non ECM)",
+          str_starts(OMF.Strategy, "SHR") ~ "SHR",
+          TRUE ~ "Other"
+        ),
         Country = OMF.Country,
         Progress = Change,
         Context = Context,
