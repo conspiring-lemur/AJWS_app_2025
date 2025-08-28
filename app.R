@@ -458,31 +458,64 @@ server <- function(input, output, session) {
   })
   
   # Render chart
-  output$longitudinal_chart <- renderPlot({
-    df <- filtered_long_data() 
+  output$longitudinal_chart <- renderPlotly({
+    df <- filtered_long_data()
     
     df$Progress <- factor(df$Progress, levels = progress_levels)
-    
     df <- df %>% filter(!is.na(Progress))
-    
     
     progress_by_year <- df %>%
       group_by(Year, Progress) %>%
-      summarize(Count = n(), .groups = "drop")
+      summarize(
+        Count = n(),
+        Percent = Count / nrow(.) * 100,
+        .groups = "drop"
+      )
     
-    ggplot(progress_by_year, aes(x = Year, y = Count, color = Progress, group = Progress)) +
+    p <- ggplot(progress_by_year, aes(x = Year, y = Count, color = Progress, group = Progress)) +
       geom_line(size = 1.2) +
       geom_point(size = 2) +
       labs(
-        title = "Progress Over the 2023–2026 Strategy Period",
+        title = "Progress (Count) Over the 2023–2026 Strategy Period",
         x = "Update Year",
         y = "Count of Updates",
         color = "Progress"
       ) +
       theme_minimal(base_size = 14)
+    
+    ggplotly(p, tooltip = c("x","y", "group"))
   })
   
-
+  output$longitudinal_chart_perc <- renderPlotly({
+    df <- filtered_long_data()
+    
+    df$Progress <- factor(df$Progress, levels = progress_levels)
+    df <- df %>% filter(!is.na(Progress))
+    
+    progress_by_year <- df %>%
+      group_by(Year, Progress) %>%
+      summarize(
+        Count = n(),
+        .groups = "drop_last"
+      ) %>%
+      mutate(
+        Percent = Count / sum(Count) * 100
+      ) %>%
+      ungroup()
+    
+    p_perc <- ggplot(progress_by_year, aes(x = Year, y = Percent, color = Progress, group = Progress)) +
+      geom_line(size = 1.2) +
+      geom_point(size = 2) +
+      labs(
+        title = "Progress (Percentage) Over the 2023–2026 Strategy Period",
+        x = "Update Year",
+        y = "Percentage of Updates",
+        color = "Progress"
+      ) +
+      theme_minimal(base_size = 14)
+    
+    ggplotly(p_perc, tooltip = c("x","y", "group"))
+  })
   
   raw_data <- reactive({
     read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "OMF") %>%
@@ -722,7 +755,9 @@ server <- function(input, output, session) {
                column(
                  h3("OMF Longitudinal 📈"),
                  width = 9,
-                 plotOutput("longitudinal_chart", height = "600px")
+                 plotlyOutput("longitudinal_chart", height = "600px"),
+                 br(),
+                 plotlyOutput("longitudinal_chart_perc", height = "600px")
                )
              )
            ),
