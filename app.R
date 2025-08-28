@@ -321,6 +321,7 @@ progress_levels <- c("Major Regress", "Moderate Regress", "Minor Regress",
 context_levels <- c("Very unfavorable", "Somewhat unfavorable", "Neutral",
                     "Somewhat favorable", "Very favorable")
 
+
 ui <- page_sidebar(
   title = "2025 AJWS Data Exploration Tool",
   theme = ajws_theme,
@@ -456,7 +457,12 @@ server <- function(input, output, session) {
   
   # Render chart
   output$longitudinal_chart <- renderPlot({
-    df <- filtered_long_data()
+    df <- filtered_long_data() 
+    
+    df$Progress <- factor(df$Progress, levels = progress_levels)
+    
+    df <- df %>% filter(!is.na(Progress))
+    
     
     progress_by_year <- df %>%
       group_by(Year, Progress) %>%
@@ -634,6 +640,7 @@ server <- function(input, output, session) {
                  )
                ),
                column(
+                 h3("OMF Heatmap 📊"),
                  width = 9,  # Main panel
                  plotlyOutput("heatmap"),
                  br(),
@@ -646,8 +653,10 @@ server <- function(input, output, session) {
            
            
            "OMF Data Explorer" = fluidPage(
-             sidebarLayout(
-               sidebarPanel(
+             fluidRow(
+               column(
+                 width = 3,
+                 wellPanel(
                  selectInput("omf_record_type", "Record Type", choices = NULL),
                  selectInput("omf_core_pillar", "Core Pillar", choices = NULL),
                  selectInput("omf_thematic_area", "Thematic Area", choices = NULL),
@@ -656,16 +665,25 @@ server <- function(input, output, session) {
                  selectInput("omf_context", "Context", choices = NULL),
                  actionButton("reset_omf_explorer", "Reset Filters", class = "btn btn-warning")
                ),
-               mainPanel(
+               br(),
+               wellPanel(
+                 h5("📌 Notes"),
+                 p("This is a placeholder for any contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+               )
+               ),
+               column(
                  h3("OMF Data Explorer 🧭"),
+                 width = 9,
                  p("Explore OMF entries below. Records are dynamically selected based on the filters selected."),
                  DTOutput("omf_explorer_table")
                )
              )
            ),
            "OMF Longitudinal" = fluidPage(
-             sidebarLayout(
-               sidebarPanel(
+             fluidRow(
+               column(
+                 width = 3,
+                 wellPanel(
                  selectInput("long_record_type", "Select Record Type:", 
                              choices = c("All", "Milestone", "Outcome"), selected = "All"),
                  selectInput("long_core_pillar", "Select Core Pillar:", 
@@ -676,7 +694,15 @@ server <- function(input, output, session) {
                              choices = NULL, selected = "All"),
                  actionButton("long_reset_filters", "Reset Filters", class = "btn btn-warning")
                ),
-               mainPanel(
+               br(),
+               wellPanel(
+                 h5("📌 Notes"),
+                 p("This is a placeholder for any contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+               )
+               ),
+               column(
+                 h3("OMF Longitudinal 📈"),
+                 width = 9,
                  plotOutput("longitudinal_chart", height = "600px")
                )
              )
@@ -689,14 +715,27 @@ server <- function(input, output, session) {
              )
            ),
            "GMS Mapping" = fluidPage(
-             titlePanel("GMS Mapping"),
-             p("Hover over each pie chart to view regional grant percentages."),
-             leafletOutput("gms_map", height = "700px")
-           ),
+             fluidRow(
+               column(
+                 h3("GMS Mapping 🗺"),
+                 width = 12,
+                 tabsetPanel(
+                   id = "gms_map_tabs",
+                   tabPanel("World Map", leafletOutput("world_map", height = "600px")),
+                   tabPanel("Africa", leafletOutput("africa_map", height = "600px")),
+                   tabPanel("Asia", leafletOutput("asia_map", height = "600px")),
+                   tabPanel("Latin America and the Caribbean", leafletOutput("latam_map", height = "600px"))
+                 )
+               )
+             )
+           )
+           ,
            "GMS Data Explorer" = fluidPage(
-             titlePanel("GMS Data Explorer"),
-             sidebarLayout(
-               sidebarPanel(
+             #titlePanel("GMS Data Explorer 🧭"),
+             fluidRow(
+             column(
+               width = 3,
+               wellPanel(
                  selectInput("gms_region", "Region:", choices = NULL),
                  selectInput("gms_grantee_region", "Grantee Region:", choices = NULL),
                  selectInput("gms_geo_area", "Geographical Area Served:", choices = NULL),
@@ -704,14 +743,20 @@ server <- function(input, output, session) {
                  selectInput("gms_issue_grantees", "Issue Area (Grantees):", choices = NULL),
                  actionButton("gms_reset_filters", "Reset Filters", class = "btn btn-warning")
                ),
-               mainPanel(
+               br(),
+               wellPanel(
+                 h5("📌 Notes"),
+                 p("This is a placeholder for any contextual notes related to the selected filters and displayed data. You can update this area with dynamic or static content.")
+               )
+             ),
+             column(
+                 h3("GMS Data Explorer 🧭"),
+                 width = 9,
                  DTOutput("gms_explorer_table")
                )
              )
            )
-           
-           
-    )
+           )
   })
   
   observeEvent(input$reset_filters, {
@@ -875,43 +920,347 @@ server <- function(input, output, session) {
   
   
   # Create the map
-  output$gms_map <- renderLeaflet({ leaflet() %>%
-    addTiles() %>%
+  
+  # Coordinates (one location for Asia)
+  coords <- data.frame(
+    region = c("Americas", "Africa", "Asia", "Cross-Regional"),
+    lat = c(23.91, 17.34, 36.68, 35),
+    lng = c(-102.22, 9.27, 103.45, -40)
+  )
+  
+  # Matrix of pie slices (some have only one slice)
+  pie_matrix <- matrix(
+    data = c(
+      30.6,  NA,     # Americas
+      23.8,  NA,     # Africa
+      37.0,  NA,   # Asia + Asia ECM
+      8.5,   NA      # Cross-Regional
+    ),
+    nrow = 4,
+    ncol = 2,
+    byrow = TRUE
+  )
+  colnames(pie_matrix) <- c("Non-ECM Grants", "ECM Grants")
+  
+  # Calculate dynamic sizes
+  totals <- rowSums(pie_matrix, na.rm = TRUE)
+  if (max(totals) == min(totals)) {
+    sizes <- rep(60, length(totals))
+  } else {
+    norm_totals <- (totals - min(totals)) / (max(totals) - min(totals))
+    sizes <- 60 + norm_totals * (80 - 30)
+  }
+  
+  output$world_map <- renderLeaflet({
+    leaflet() %>%
+      addProviderTiles(providers$CartoDB.Positron) %>%
+      fitBounds(
+        lng1 = min(coords$lng),
+        lat1 = min(coords$lat),
+        lng2 = max(coords$lng),
+        lat2 = max(coords$lat)
+      ) %>%
+      addMinicharts(
+        lng = coords$lng,
+        lat = coords$lat,
+        chartdata = pie_matrix,
+        type = "pie",
+        width = sizes,
+        height = sizes,
+        showLabels = FALSE
+      ) %>%
+      addCircleMarkers(
+        lng = coords$lng,
+        lat = coords$lat,
+        radius = 20,
+        stroke = FALSE,
+        fillOpacity = 0,
+        label = lapply(1:nrow(coords), function(i) {
+          label_text <- paste0(
+            "<strong>", coords$region[i], ":</strong><br>",
+            paste0(
+              colnames(pie_matrix)[!is.na(pie_matrix[i, ])], ": ",
+              round(pie_matrix[i, !is.na(pie_matrix[i, ])], 1), "%",
+              collapse = "<br>"
+            )
+          )
+          htmltools::HTML(label_text)
+        }),
+        labelOptions = labelOptions(
+          direction = "auto",
+          opacity = 1,
+          textsize = "13px",
+          style = list(
+            "background-color" = "white",
+            "border" = "1px solid gray",
+            "padding" = "5px",
+            "border-radius" = "4px"
+          )
+        )
+      )
     
-    # Add pie charts
-    addMinicharts(
-      lng = coords$lng,
-      lat = coords$lat,
-      chartdata = t(pie_data),
-      type = "pie",
-      width = 60,
-      height = 60,
-      showLabels = FALSE
-    ) %>%
-    
-    # Add invisible markers with hover labels for tooltips
-    addCircleMarkers(
-      lng = coords$lng,
-      lat = coords$lat,
-      radius = 20,  # <- bigger hover area
-      stroke = FALSE,  # no outline
-      fillOpacity = 0,  # fully invisible
-      label = lapply(1:nrow(coords), function(i) {
-        htmltools::HTML(paste0(
-          "<strong>", coords$region[i], ":</strong> ",
-          round(pie_data[[i]], 1), "%"
-        ))
-      }),
-      labelOptions = labelOptions(
-        direction = "auto",
-        opacity = 1,
-        textsize = "13px",
-        style = list(
-          "background-color" = "white",
-          "border" = "1px solid gray",
-          "padding" = "5px",
-          "border-radius" = "4px")))
+  })
+  
+  # Data frame of values
+
+  world_df <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "funding_data")
+  
+  africa_countries <- c("DRC", "KENYA", "LIBERIA", "SENEGAL", "UGANDA", "SOUTH AFRICA")
+  
+  
+  africa_data <- world_df %>% filter(Row.Labels %in% africa_countries)
+  
+  names(africa_data) <- c("country", "CPR", "HR", "LWCJ", "SHR_ECM", "SHR_non_ECM", "Total")
+  
+  
+  africa_coords <- data.frame(
+    country = c("DRC", "KENYA", "LIBERIA", "SENEGAL", "UGANDA", "SOUTH AFRICA"),
+    lat = c(-2.88, 0.02, 6.3, 14.5, 1.37, -30.56),
+    lng = c(23.65, 37.91, -9.43, -14.5, 32.29, 22.94)
+  )
+  
+  
+  # Join with coordinates
+  plot_data_africa <- left_join(africa_data, africa_coords, by = "country")
+  
+  # Extract chartdata matrix
+  pie_matrix_africa <- plot_data_africa %>%
+    select(CPR, HR, LWCJ, SHR_ECM, SHR_non_ECM) %>%
+    as.matrix()
+  
+  # Normalize pie size based on Total
+  totals_africa <- plot_data_africa$Total
+  norm_totals_africa <- (totals_africa - min(totals_africa)) / (max(totals_africa) - min(totals_africa))
+  sizes_africa <- 60 + norm_totals_africa * (80 - 30)
+  
+  output$africa_map <- renderLeaflet({
+    leaflet() %>%
+      addProviderTiles(providers$CartoDB.Positron) %>%
+      fitBounds(
+        lng1 = min(plot_data_africa$lng),
+        lat1 = min(plot_data_africa$lat),
+        lng2 = max(plot_data_africa$lng),
+        lat2 = max(plot_data_africa$lat)
+      ) %>%
+      addMinicharts(
+        lng = plot_data_africa$lng,
+        lat = plot_data_africa$lat,
+        chartdata = pie_matrix_africa,
+        type = "pie",
+        width = sizes_africa,
+        height = sizes_africa,
+        colorPalette = c("#BB9BFF", "#FFFF4C", "#B1D850", "#63C1FC", "#94D2FC"),
+        showLabels = FALSE,
+        opacity = .75
+      ) %>%
+      addCircleMarkers(
+        lng = plot_data_africa$lng,
+        lat = plot_data_africa$lat,
+        radius = 20,
+        stroke = FALSE,
+        fillOpacity = 0,
+        label = lapply(1:nrow(plot_data_africa), function(i) {
+          vals <- round(pie_matrix_africa[i, ], 0)
+          names(vals) <- c("CPR", "HR", "LWCJ", "SHR (ECM)", "SHR (non-ECM)")
           
+          valid_idx <- which(!is.na(vals) & vals > 0)
+          
+          label_text <- paste0(
+            "<strong>", plot_data_africa$country[i], "</strong><br>",
+            paste(
+              names(vals)[valid_idx],
+              formatC(vals[valid_idx], format = "d", big.mark = ","),
+              sep = ": $", collapse = "<br>"
+            )
+          )
+          htmltools::HTML(label_text)
+        }),
+        labelOptions = labelOptions(
+          direction = "auto",
+          opacity = 1,
+          textsize = "13px",
+          style = list(
+            "background-color" = "white",
+            "border" = "1px solid gray",
+            "padding" = "5px",
+            "border-radius" = "4px"
+          )
+        )
+      )
+    })
+  
+  
+  # Data frame of values
+  
+  asia_countries <- c("BANGLADESH", "BURMA", "CAMBODIA", "INDIA", "SRILANKA", "THAILAND")
+  
+  
+  asia_data <- world_df %>% filter(Row.Labels %in% asia_countries)
+  
+  names(asia_data) <- c("country", "CPR", "HR", "LWCJ", "SHR_ECM", "SHR_non_ECM", "Total")
+  
+  
+  asia_coords <- data.frame(
+    country = c("BANGLADESH", "BURMA", "CAMBODIA", "INDIA", "SRILANKA", "THAILAND"),
+    lat = c(23.7, 21.9, 12.57, 20.59, 7.87, 15.87),
+    lng = c(90.4, 95.9, 104.99, 78.96, 80.77, 100.99)
+  )
+  
+  
+  # Join with coordinates
+  plot_data_asia <- left_join(asia_data, asia_coords, by = "country")
+  
+  # Extract chartdata matrix
+  pie_matrix_asia <- plot_data_asia %>%
+    select(CPR, HR, LWCJ, SHR_ECM, SHR_non_ECM) %>%
+    as.matrix()
+  
+  # Normalize pie size based on Total
+  totals_asia <- plot_data_asia$Total
+  norm_totals_asia <- (totals_asia - min(totals_asia)) / (max(totals_asia) - min(totals_asia))
+  sizes_asia <- 60 + norm_totals_asia * (80 - 30)
+  
+  output$asia_map <- renderLeaflet({
+    leaflet() %>%
+      addProviderTiles(providers$CartoDB.Positron) %>%
+      fitBounds(
+        lng1 = min(plot_data_asia$lng),
+        lat1 = min(plot_data_asia$lat),
+        lng2 = max(plot_data_asia$lng),
+        lat2 = max(plot_data_asia$lat)
+      ) %>%
+      addMinicharts(
+        lng = plot_data_asia$lng,
+        lat = plot_data_asia$lat,
+        chartdata = pie_matrix_asia,
+        type = "pie",
+        width = sizes_asia,
+        height = sizes_asia,
+        colorPalette = c("#BB9BFF", "#FFFF4C", "#B1D850", "#63C1FC", "#94D2FC"),
+        showLabels = FALSE,
+        opacity = .75
+      ) %>%
+      addCircleMarkers(
+        lng = plot_data_asia$lng,
+        lat = plot_data_asia$lat,
+        radius = 20,
+        stroke = FALSE,
+        fillOpacity = 0,
+        label = lapply(1:nrow(plot_data_asia), function(i) {
+          vals <- round(pie_matrix_asia[i, ], 0)
+          names(vals) <- c("CPR", "HR", "LWCJ", "SHR (ECM)", "SHR (non-ECM)")
+          
+          valid_idx <- which(!is.na(vals) & vals > 0)
+          
+          label_text <- paste0(
+            "<strong>", plot_data_asia$country[i], "</strong><br>",
+            paste(
+              names(vals)[valid_idx],
+              formatC(vals[valid_idx], format = "d", big.mark = ","),
+              sep = ": $", collapse = "<br>"
+            )
+          )
+          htmltools::HTML(label_text)
+        }),
+        labelOptions = labelOptions(
+          direction = "auto",
+          opacity = 1,
+          textsize = "13px",
+          style = list(
+            "background-color" = "white",
+            "border" = "1px solid gray",
+            "padding" = "5px",
+            "border-radius" = "4px"
+          )
+        )
+      )
+  })
+  
+  # Data frame of values
+ 
+  latam_countries <- c("DOMINICAN REPUBLIC", "EL SALVADOR", "GUATEMALA", "HAITI", "MEXICO", "NICARAGUA")
+  
+  
+  latam_data <- world_df %>% filter(Row.Labels %in% latam_countries)
+  
+  names(latam_data) <- c("country", "CPR", "HR", "LWCJ", "SHR_ECM", "SHR_non_ECM", "Total")
+  
+  
+  latam_coords <- data.frame(
+    country = c("DOMINICAN REPUBLIC", "EL SALVADOR", "GUATEMALA", "HAITI", "MEXICO", "NICARAGUA"),
+    lat = c(18.74, 13.79, 15.78, 18.97, 23.63, 12.87),
+    lng = c(-70.16, -88.89, -90.23, -72.29, -102.55, -85.21)
+  )
+  
+  
+  
+  # Join with coordinates
+  plot_data_latam <- left_join(latam_data, latam_coords, by = "country")
+  
+  # Extract chartdata matrix
+  pie_matrix_latam <- plot_data_latam %>%
+    select(CPR, HR, LWCJ, SHR_ECM, SHR_non_ECM) %>%
+    as.matrix()
+  
+  # Normalize pie size based on Total
+  totals_latam <- plot_data_latam$Total
+  norm_totals_latam <- (totals_latam - min(totals_latam)) / (max(totals_latam) - min(totals_latam))
+  sizes_latam <- 60 + norm_totals_latam * (80 - 30)
+  
+  output$latam_map <- renderLeaflet({
+    leaflet() %>%
+      addProviderTiles(providers$CartoDB.Positron) %>%
+      fitBounds(
+        lng1 = min(plot_data_latam$lng),
+        lat1 = min(plot_data_latam$lat),
+        lng2 = max(plot_data_latam$lng),
+        lat2 = max(plot_data_latam$lat)
+      ) %>%
+      addMinicharts(
+        lng = plot_data_latam$lng,
+        lat = plot_data_latam$lat,
+        chartdata = pie_matrix_latam,
+        type = "pie",
+        width = sizes_latam,
+        height = sizes_latam,
+        colorPalette = c("#BB9BFF", "#FFFF4C", "#B1D850", "#63C1FC", "#94D2FC"),
+        showLabels = FALSE,
+        opacity = .75
+      ) %>%
+      addCircleMarkers(
+        lng = plot_data_latam$lng,
+        lat = plot_data_latam$lat,
+        radius = 20,
+        stroke = FALSE,
+        fillOpacity = 0,
+        label = lapply(1:nrow(plot_data_latam), function(i) {
+          vals <- round(pie_matrix_latam[i, ], 0)
+          names(vals) <- c("CPR", "HR", "LWCJ", "SHR (ECM)", "SHR (non-ECM)")
+          
+          valid_idx <- which(!is.na(vals) & vals > 0)
+          
+          label_text <- paste0(
+            "<strong>", plot_data_latam$country[i], "</strong><br>",
+            paste(
+              names(vals)[valid_idx],
+              formatC(vals[valid_idx], format = "d", big.mark = ","),
+              sep = ": $", collapse = "<br>"
+            )
+          )
+          htmltools::HTML(label_text)
+        }),
+        labelOptions = labelOptions(
+          direction = "auto",
+          opacity = 1,
+          textsize = "13px",
+          style = list(
+            "background-color" = "white",
+            "border" = "1px solid gray",
+            "padding" = "5px",
+            "border-radius" = "4px"
+          )
+        )
+      )
   })
   
   
