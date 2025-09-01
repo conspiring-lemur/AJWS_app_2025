@@ -10,8 +10,63 @@ library(DT)
 library(stringr)
 library(leaflet)
 library(leaflet.minicharts)
+library(RSQLite)
+library(DBI)
 
 #test on ipad test # test on desktop #test on iphone
+
+DB_PATH <- "notes.sqlite"
+
+init_db <- function(con) {
+  DBI::dbExecute(con, "
+    CREATE TABLE IF NOT EXISTS notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      note_text TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  ")
+}
+
+fetch_notes <- function(con, user_id) {
+  DBI::dbGetQuery(con, "
+    SELECT id, note_text, created_at, updated_at
+      FROM notes
+     WHERE user_id = ?
+     ORDER BY id ASC
+  ", params = list(user_id))
+}
+
+insert_note <- function(con, user_id, txt) {
+  DBI::dbWithTransaction(con, {
+    now <- as.character(Sys.time())
+    DBI::dbExecute(con, "
+      INSERT INTO notes (user_id, note_text, created_at, updated_at)
+      VALUES (?, ?, ?, ?)
+    ", params = list(user_id, txt, now, now))
+  })
+}
+
+update_note <- function(con, user_id, id, txt) {
+  DBI::dbWithTransaction(con, {
+    now <- as.character(Sys.time())
+    DBI::dbExecute(con, "
+      UPDATE notes SET note_text = ?, updated_at = ?
+      WHERE id = ? AND user_id = ?
+    ", params = list(txt, now, id, user_id))
+  })
+}
+
+delete_note <- function(con, user_id, id) {
+  DBI::dbWithTransaction(con, {
+    DBI::dbExecute(con, "
+      DELETE FROM notes WHERE id = ? AND user_id = ?
+    ", params = list(id, user_id))
+  })
+}
+
+get_con <- function() DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
 
 
 # AJWS branding colors
@@ -354,6 +409,109 @@ server <- function(input, output, session) {
   observeEvent(input$go_gms_map, current_page("GMS Mapping"))
   observeEvent(input$go_gms_data_explorer, current_page("GMS Data Explorer"))
   observeEvent(input$go_gms_longitudinal, current_page("GMS Longitudinal Data"))
+  
+  user_id <- reactive({
+    # Prefer cookie; fall back to session token (not persistent) only until cookie arrives
+    if (!is.null(input$notes_uid) && nzchar(input$notes_uid)) {
+      input$notes_uid
+    } else {
+      paste0("session-", session$token)
+    }
+  })
+  
+  output$uid_show <- renderText(user_id())
+  
+  con <- get_con()
+  init_db(con)
+  session$onSessionEnded(function() try(DBI::dbDisconnect(con), silent = TRUE))
+  
+  # Initialize without touching user_id()
+  empty_tbl <- data.frame(
+    Note = character(),
+    `Last Updated` = character(),
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  rv <- reactiveValues(
+    data_raw = NULL,        # raw rows from DB (id, note_text, created_at, updated_at)
+    selected_row = NULL
+  )
+  
+  # Helper to (re)load notes when we have a user id
+  reload_notes <- function() {
+    uid <- user_id()  # safe here (inside reactive context)
+    rows <- fetch_notes(con, uid)
+    rv$data_raw <- rows
+  }
+  
+  # Load once the cookie-based id arrives (and also on any change)
+  observeEvent(user_id(), {
+    reload_notes()
+  }, ignoreInit = FALSE)
+  
+  # Add/Update
+  observeEvent(input$add_update, {
+    req(user_id())
+    txt <- trimws(input$note_text)
+    if (!nzchar(txt)) return(invisible(NULL))
+    
+    sel <- rv$selected_row
+    if (!is.null(sel) && length(sel) == 1 && !is.na(sel) &&
+        !is.null(rv$data_raw) && nrow(rv$data_raw) >= sel && sel >= 1) {
+      note_id <- rv$data_raw$id[sel]
+      update_note(con, user_id(), note_id, txt)
+    } else {
+      insert_note(con, user_id(), txt)
+    }
+    reload_notes()
+    if (!is.null(rv$data_raw)) rv$selected_row <- nrow(rv$data_raw)
+  })
+  
+  # New
+  observeEvent(input$new_note, {
+    rv$selected_row <- NULL
+    updateTextAreaInput(session, "note_text", value = "")
+  })
+  
+  # Delete
+  observeEvent(input$delete_note, {
+    req(user_id())
+    sel <- rv$selected_row
+    if (!is.null(sel) && length(sel) == 1 && !is.na(sel) &&
+        !is.null(rv$data_raw) && nrow(rv$data_raw) >= sel && sel >= 1) {
+      note_id <- rv$data_raw$id[sel]
+      delete_note(con, user_id(), note_id)
+      rv$selected_row <- NULL
+      updateTextAreaInput(session, "note_text", value = "")
+      reload_notes()
+    }
+  })
+  
+  # Table
+  output$notes_table <- renderDT({
+    if (is.null(rv$data_raw) || nrow(rv$data_raw) == 0) {
+      dat <- empty_tbl
+    } else {
+      dat <- data.frame(
+        Note = rv$data_raw$note_text,
+        `Last Updated` = rv$data_raw$updated_at,
+        check.names = FALSE,
+        stringsAsFactors = FALSE
+      )
+    }
+    datatable(dat, selection = "single", options = list(dom = "t", paging = FALSE), rownames = TRUE)
+  })
+  
+  # Selection -> editor
+  observeEvent(input$notes_table_rows_selected, {
+    sel <- input$notes_table_rows_selected
+    rv$selected_row <- sel
+    if (!is.null(rv$data_raw) && length(sel) == 1 && !is.na(sel) &&
+        sel >= 1 && sel <= nrow(rv$data_raw)) {
+      updateTextAreaInput(session, "note_text", value = rv$data_raw$note_text[sel])
+    }
+  }, ignoreInit = TRUE)
+  
   
   # Reactive GMS dataset
   gms_cleaned <- reactive({
@@ -713,9 +871,32 @@ server <- function(input, output, session) {
                    p("Key Insights from Heatmap"),
                    p(HTML("<ul>
                            <li>21.4% major progress occurred in somewhat unfavorable contexts — showing resilience despite structural barriers.</li>
-                           <li>14.3% moderate and 14.3% minor progress also advanced in unfavorable conditions, reflecting strong adaptation, long-term accompaniment, and embedded advocacy strategies.</li></ul>"))
+                           <li>14.3% moderate and 14.3% minor progress also advanced in unfavorable conditions, reflecting strong adaptation, long-term accompaniment, and embedded advocacy strategies.</li></ul>")),
+                   br(),
+                   textAreaInput(
+                     "note_text",
+                     label = "Add or edit a note:",
+                     placeholder = "Type your note here...",
+                     width = "100%",
+                     height = "120px"
+                   ),
+                   fluidRow(
+                     column(4, actionButton("add_update", "Add / Update", class = "btn-primary", width = "100%")),
+                     column(4, actionButton("new_note", "New Note", width = "100%")),
+                     column(4, actionButton("delete_note", "Delete Selected", class = "btn-danger", width = "100%"))
+                   ),
+                   br(),
+                   h4("Your notes"),
+                   DTOutput("notes_table"),
+                   br(),
+                   tags$small(
+                     em("Stored in "), code(DB_PATH),
+                     em(" with a per-browser id kept in a cookie.")
+                   ),
+                   br(),
+                   tags$small("Debug user id: ", textOutput("uid_show", inline = TRUE))
                  )
-               ),
+                 ),
                column(
                  h3("OMF Heatmap 📊"),
                  width = 9,  # Main panel
@@ -725,7 +906,41 @@ server <- function(input, output, session) {
                  br(),
                  DTOutput("summary_by_context")
                )
-             )
+             ),
+             tags$script(HTML("
+    document.addEventListener('DOMContentLoaded', function() {
+      try {
+        function uuidv4(){
+          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
+            var r = Math.random()*16|0, v = c === 'x' ? r : (r&0x3|0x8);
+            return v.toString(16);
+          });
+        }
+        function setCookie(name, value, days){
+          var d = new Date();
+          d.setTime(d.getTime() + (days*24*60*60*1000));
+          document.cookie = name + '=' + encodeURIComponent(value) +
+                            '; expires=' + d.toUTCString() +
+                            '; path=/' + '; SameSite=Lax';
+        }
+        function getCookie(name){
+          var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()\\[\\]\\\\/+^])/g,'\\\\$1') + '=([^;]*)'));
+          return m ? decodeURIComponent(m[1]) : null;
+        }
+        var key = 'notes_uid';
+        var uid = getCookie(key);
+        if(!uid){ uid = uuidv4(); setCookie(key, uid, 3650); }
+        function push(){
+          if(window.Shiny && Shiny.setInputValue){
+            Shiny.setInputValue('notes_uid', uid, {priority: 'event'});
+          } else {
+            setTimeout(push, 50);
+          }
+        }
+        push();
+      } catch(e) { console.error('Cookie setup failed:', e); }
+    });
+  "))
            ),
            
            
