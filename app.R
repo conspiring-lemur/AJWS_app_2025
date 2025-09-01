@@ -603,7 +603,7 @@ server <- function(input, output, session) {
       )) %>%
       select(OMF.Strategy) %>%
       unique() %>%
-      arrange(OMF.Strategy)
+      arrange(OMF.Strategy) 
     
     theme_choices <- c("All Thematic Areas", all_themes)
   
