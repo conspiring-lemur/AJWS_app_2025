@@ -16,7 +16,11 @@ library(DBI)
 #test on ipad test # test on desktop #test on iphone
 
 DB_PATH <- "notes.sqlite"
+GLOBAL_USER_ID <- "global"
 
+get_con <- function() DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
+
+# Create table if it doesn't exist; ensure it has a user_id column
 init_db <- function(con) {
   DBI::dbExecute(con, "
     CREATE TABLE IF NOT EXISTS notes (
@@ -29,45 +33,40 @@ init_db <- function(con) {
   ")
 }
 
-fetch_notes <- function(con, user_id) {
+fetch_notes_all <- function(con) {
   DBI::dbGetQuery(con, "
-    SELECT id, note_text, created_at, updated_at
+    SELECT id, user_id, note_text, created_at, updated_at
       FROM notes
-     WHERE user_id = ?
      ORDER BY id ASC
-  ", params = list(user_id))
+  ")
 }
 
-insert_note <- function(con, user_id, txt) {
+insert_note_global <- function(con, txt) {
   DBI::dbWithTransaction(con, {
     now <- as.character(Sys.time())
     DBI::dbExecute(con, "
       INSERT INTO notes (user_id, note_text, created_at, updated_at)
       VALUES (?, ?, ?, ?)
-    ", params = list(user_id, txt, now, now))
+    ", params = list(GLOBAL_USER_ID, txt, now, now))
   })
 }
 
-update_note <- function(con, user_id, id, txt) {
+update_note_global <- function(con, id, txt) {
   DBI::dbWithTransaction(con, {
     now <- as.character(Sys.time())
     DBI::dbExecute(con, "
-      UPDATE notes SET note_text = ?, updated_at = ?
-      WHERE id = ? AND user_id = ?
-    ", params = list(txt, now, id, user_id))
+      UPDATE notes
+         SET note_text = ?, updated_at = ?
+       WHERE id = ?
+    ", params = list(txt, now, id))
   })
 }
 
-delete_note <- function(con, user_id, id) {
+delete_note_global <- function(con, id) {
   DBI::dbWithTransaction(con, {
-    DBI::dbExecute(con, "
-      DELETE FROM notes WHERE id = ? AND user_id = ?
-    ", params = list(id, user_id))
+    DBI::dbExecute(con, "DELETE FROM notes WHERE id = ?", params = list(id))
   })
 }
-
-get_con <- function() DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
-
 
 # AJWS branding colors
 ajws_primary <- "#0B5C5C"
@@ -410,48 +409,17 @@ server <- function(input, output, session) {
   observeEvent(input$go_gms_data_explorer, current_page("GMS Data Explorer"))
   observeEvent(input$go_gms_longitudinal, current_page("GMS Longitudinal Data"))
   
-  user_id <- reactive({
-    # Prefer cookie; fall back to session token (not persistent) only until cookie arrives
-    if (!is.null(input$notes_uid) && nzchar(input$notes_uid)) {
-      input$notes_uid
-    } else {
-      paste0("session-", session$token)
-    }
-  })
-  
-  output$uid_show <- renderText(user_id())
-  
   con <- get_con()
   init_db(con)
   session$onSessionEnded(function() try(DBI::dbDisconnect(con), silent = TRUE))
   
-  # Initialize without touching user_id()
-  empty_tbl <- data.frame(
-    Note = character(),
-    `Last Updated` = character(),
-    stringsAsFactors = FALSE,
-    check.names = FALSE
-  )
-  rv <- reactiveValues(
-    data_raw = NULL,        # raw rows from DB (id, note_text, created_at, updated_at)
-    selected_row = NULL
-  )
+  rv <- reactiveValues(data_raw = fetch_notes_all(con), selected_row = NULL)
   
-  # Helper to (re)load notes when we have a user id
   reload_notes <- function() {
-    uid <- user_id()  # safe here (inside reactive context)
-    rows <- fetch_notes(con, uid)
-    rv$data_raw <- rows
+    rv$data_raw <- fetch_notes_all(con)
   }
   
-  # Load once the cookie-based id arrives (and also on any change)
-  observeEvent(user_id(), {
-    reload_notes()
-  }, ignoreInit = FALSE)
-  
-  # Add/Update
   observeEvent(input$add_update, {
-    req(user_id())
     txt <- trimws(input$note_text)
     if (!nzchar(txt)) return(invisible(NULL))
     
@@ -459,38 +427,34 @@ server <- function(input, output, session) {
     if (!is.null(sel) && length(sel) == 1 && !is.na(sel) &&
         !is.null(rv$data_raw) && nrow(rv$data_raw) >= sel && sel >= 1) {
       note_id <- rv$data_raw$id[sel]
-      update_note(con, user_id(), note_id, txt)
+      update_note_global(con, note_id, txt)
     } else {
-      insert_note(con, user_id(), txt)
+      insert_note_global(con, txt)
     }
     reload_notes()
     if (!is.null(rv$data_raw)) rv$selected_row <- nrow(rv$data_raw)
   })
   
-  # New
   observeEvent(input$new_note, {
     rv$selected_row <- NULL
     updateTextAreaInput(session, "note_text", value = "")
   })
   
-  # Delete
   observeEvent(input$delete_note, {
-    req(user_id())
     sel <- rv$selected_row
     if (!is.null(sel) && length(sel) == 1 && !is.na(sel) &&
         !is.null(rv$data_raw) && nrow(rv$data_raw) >= sel && sel >= 1) {
       note_id <- rv$data_raw$id[sel]
-      delete_note(con, user_id(), note_id)
+      delete_note_global(con, note_id)
       rv$selected_row <- NULL
       updateTextAreaInput(session, "note_text", value = "")
       reload_notes()
     }
   })
   
-  # Table
   output$notes_table <- renderDT({
     if (is.null(rv$data_raw) || nrow(rv$data_raw) == 0) {
-      dat <- empty_tbl
+      dat <- data.frame(Note = character(), `Last Updated` = character(), check.names = FALSE)
     } else {
       dat <- data.frame(
         Note = rv$data_raw$note_text,
@@ -502,7 +466,6 @@ server <- function(input, output, session) {
     datatable(dat, selection = "single", options = list(dom = "t", paging = FALSE), rownames = TRUE)
   })
   
-  # Selection -> editor
   observeEvent(input$notes_table_rows_selected, {
     sel <- input$notes_table_rows_selected
     rv$selected_row <- sel
@@ -849,7 +812,7 @@ server <- function(input, output, session) {
            "OMF Heatmap" = fluidPage(
              fluidRow(
                column(
-                 width = 3,  # Sidebar column
+                 width = 5,  # Sidebar column
                  wellPanel(
                    selectInput("record_type_select", "Select Record Type:", choices = record_type_choices, selected = "All Record Types"),
                    selectInput("pillar_select", "Select Core Pillar:", choices = pillar_choices, selected = "All Core Pillars"),
@@ -886,62 +849,24 @@ server <- function(input, output, session) {
                      column(4, actionButton("delete_note", "Delete Selected", class = "btn-danger", width = "100%"))
                    ),
                    br(),
-                   h4("Your notes"),
+                   h4("All notes"),
                    DTOutput("notes_table"),
                    br(),
-                   tags$small(
-                     em("Stored in "), code(DB_PATH),
-                     em(" with a per-browser id kept in a cookie.")
-                   ),
-                   br(),
-                   tags$small("Debug user id: ", textOutput("uid_show", inline = TRUE))
+                   tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
                  )
-                 ),
+               ),
                column(
                  h3("OMF Heatmap 📊"),
-                 width = 9,  # Main panel
+                 width = 7,  # Main panel
                  plotlyOutput("heatmap"),
                  br(),
                  DTOutput("summary_by_progress"),
                  br(),
                  DTOutput("summary_by_context")
                )
-             ),
-             tags$script(HTML("
-    document.addEventListener('DOMContentLoaded', function() {
-      try {
-        function uuidv4(){
-          return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
-            var r = Math.random()*16|0, v = c === 'x' ? r : (r&0x3|0x8);
-            return v.toString(16);
-          });
-        }
-        function setCookie(name, value, days){
-          var d = new Date();
-          d.setTime(d.getTime() + (days*24*60*60*1000));
-          document.cookie = name + '=' + encodeURIComponent(value) +
-                            '; expires=' + d.toUTCString() +
-                            '; path=/' + '; SameSite=Lax';
-        }
-        function getCookie(name){
-          var m = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()\\[\\]\\\\/+^])/g,'\\\\$1') + '=([^;]*)'));
-          return m ? decodeURIComponent(m[1]) : null;
-        }
-        var key = 'notes_uid';
-        var uid = getCookie(key);
-        if(!uid){ uid = uuidv4(); setCookie(key, uid, 3650); }
-        function push(){
-          if(window.Shiny && Shiny.setInputValue){
-            Shiny.setInputValue('notes_uid', uid, {priority: 'event'});
-          } else {
-            setTimeout(push, 50);
-          }
-        }
-        push();
-      } catch(e) { console.error('Cookie setup failed:', e); }
-    });
-  "))
+             )
            ),
+           
            
            
            "OMF Data Explorer" = fluidPage(
