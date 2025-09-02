@@ -18,54 +18,147 @@ library(DBI)
 DB_PATH <- "notes.sqlite"
 GLOBAL_USER_ID <- "global"
 
+# --- DB helpers --------------------------------------------------------------
 get_con <- function() DBI::dbConnect(RSQLite::SQLite(), DB_PATH)
 
-# Create table if it doesn't exist; ensure it has a user_id column
 init_db <- function(con) {
   DBI::dbExecute(con, "
     CREATE TABLE IF NOT EXISTS notes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id TEXT NOT NULL,
+      section_key TEXT NOT NULL,
       note_text TEXT NOT NULL,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )
   ")
+  
+  # Ensure older schemas get the needed columns
+  fields <- tryCatch(DBI::dbListFields(con, "notes"), error = function(e) character())
+  if (length(fields)) {
+    if (!"user_id" %in% fields) {
+      DBI::dbExecute(con, "ALTER TABLE notes ADD COLUMN user_id TEXT")
+      DBI::dbExecute(con, "UPDATE notes SET user_id = 'global' WHERE user_id IS NULL")
+    }
+    if (!"section_key" %in% fields) {
+      DBI::dbExecute(con, "ALTER TABLE notes ADD COLUMN section_key TEXT")
+      DBI::dbExecute(con, "UPDATE notes SET section_key = 'OMF Heatmap' WHERE section_key IS NULL OR section_key = ''")
+    }
+  }
 }
 
-fetch_notes_all <- function(con) {
+fetch_notes <- function(con, section_key) {
   DBI::dbGetQuery(con, "
-    SELECT id, user_id, note_text, created_at, updated_at
+    SELECT id, note_text, created_at, updated_at
       FROM notes
+     WHERE section_key = ?
      ORDER BY id ASC
-  ")
+  ", params = list(section_key))
 }
 
-insert_note_global <- function(con, txt) {
-  DBI::dbWithTransaction(con, {
-    now <- as.character(Sys.time())
-    DBI::dbExecute(con, "
-      INSERT INTO notes (user_id, note_text, created_at, updated_at)
-      VALUES (?, ?, ?, ?)
-    ", params = list(GLOBAL_USER_ID, txt, now, now))
-  })
+insert_note <- function(con, section_key, txt) {
+  now <- as.character(Sys.time())
+  DBI::dbExecute(con, "
+    INSERT INTO notes (user_id, section_key, note_text, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?)
+  ", params = list(GLOBAL_USER_ID, section_key, txt, now, now))
 }
 
-update_note_global <- function(con, id, txt) {
-  DBI::dbWithTransaction(con, {
-    now <- as.character(Sys.time())
-    DBI::dbExecute(con, "
-      UPDATE notes
-         SET note_text = ?, updated_at = ?
-       WHERE id = ?
-    ", params = list(txt, now, id))
-  })
+update_note <- function(con, id, txt) {
+  now <- as.character(Sys.time())
+  DBI::dbExecute(con, "
+    UPDATE notes SET note_text = ?, updated_at = ? WHERE id = ?
+  ", params = list(txt, now, id))
 }
 
-delete_note_global <- function(con, id) {
-  DBI::dbWithTransaction(con, {
-    DBI::dbExecute(con, "DELETE FROM notes WHERE id = ?", params = list(id))
+delete_note <- function(con, id) {
+  DBI::dbExecute(con, "DELETE FROM notes WHERE id = ?", params = list(id))
+}
+
+# --- Notes module (so we can reuse for Section 1 and Section 2) --------------
+notesUI <- function(id, section_title) {
+  ns <- NS(id)
+  tagList(
+    h3(paste("User Notes —", section_title)),
+    textAreaInput(ns("note_text"), "Add or edit a note:",
+                  placeholder = paste("Notes for", section_title),
+                  width = "100%", height = "120px"),
+    fluidRow(
+      column(4, actionButton(ns("add_update"), "Add / Update", class = "btn-primary", width = "100%")),
+      column(4, actionButton(ns("new_note"), "New Note", width = "100%")),
+      column(4, actionButton(ns("delete_note"), "Delete Selected", class = "btn-danger", width = "100%"))
+    ),
+    br(),
+    DTOutput(ns("notes_table")),
+    br(),
+    plotOutput(ns("plot"))
+  )
+}
+
+notesServer <- function(id, con, section_key) {
+  moduleServer(id, function(input, output, session) {
+    rv <- reactiveValues(data_raw = fetch_notes(con, section_key), selected_row = NULL)
+    
+    reload_notes <- function() {
+      rv$data_raw <- fetch_notes(con, section_key)
+    }
+    
+    observeEvent(input$add_update, {
+      txt <- trimws(input$note_text)
+      if (!nzchar(txt)) return()
+      sel <- rv$selected_row
+      if (!is.null(sel) && length(sel) == 1 && !is.na(sel) &&
+          nrow(rv$data_raw) >= sel && sel >= 1) {
+        note_id <- rv$data_raw$id[sel]
+        update_note(con, note_id, txt)
+      } else {
+        insert_note(con, section_key, txt)
+      }
+      reload_notes()
+      rv$selected_row <- nrow(rv$data_raw)
+    })
+    
+    observeEvent(input$new_note, {
+      rv$selected_row <- NULL
+      updateTextAreaInput(session, "note_text", value = "")
+    })
+    
+    observeEvent(input$delete_note, {
+      sel <- rv$selected_row
+      if (!is.null(sel) && length(sel) == 1 && !is.na(sel) &&
+          nrow(rv$data_raw) >= sel && sel >= 1) {
+        note_id <- rv$data_raw$id[sel]
+        delete_note(con, note_id)
+        rv$selected_row <- NULL
+        updateTextAreaInput(session, "note_text", value = "")
+        reload_notes()
+      }
+    })
+    
+    output$notes_table <- renderDT({
+      if (is.null(rv$data_raw) || nrow(rv$data_raw) == 0) {
+        dat <- data.frame(Note = character(), `Last Updated` = character())
+      } else {
+        dat <- data.frame(
+          Note = rv$data_raw$note_text,
+          `Last Updated` = rv$data_raw$updated_at,
+          stringsAsFactors = FALSE
+        )
+      }
+      datatable(dat, selection = "single", options = list(dom = "t", paging = FALSE), rownames = TRUE)
+    })
+    
+    observeEvent(input$notes_table_rows_selected, {
+      sel <- input$notes_table_rows_selected
+      rv$selected_row <- sel
+      if (!is.null(rv$data_raw) && length(sel) == 1 && !is.na(sel) &&
+          sel >= 1 && sel <= nrow(rv$data_raw)) {
+        updateTextAreaInput(session, "note_text", value = rv$data_raw$note_text[sel])
+      }
+    }, ignoreInit = TRUE)
+    
   })
+  
 }
 
 # AJWS branding colors
@@ -413,67 +506,15 @@ server <- function(input, output, session) {
   init_db(con)
   session$onSessionEnded(function() try(DBI::dbDisconnect(con), silent = TRUE))
   
-  rv <- reactiveValues(data_raw = fetch_notes_all(con), selected_row = NULL)
-  
-  reload_notes <- function() {
-    rv$data_raw <- fetch_notes_all(con)
-  }
-  
-  observeEvent(input$add_update, {
-    txt <- trimws(input$note_text)
-    if (!nzchar(txt)) return(invisible(NULL))
-    
-    sel <- rv$selected_row
-    if (!is.null(sel) && length(sel) == 1 && !is.na(sel) &&
-        !is.null(rv$data_raw) && nrow(rv$data_raw) >= sel && sel >= 1) {
-      note_id <- rv$data_raw$id[sel]
-      update_note_global(con, note_id, txt)
-    } else {
-      insert_note_global(con, txt)
-    }
-    reload_notes()
-    if (!is.null(rv$data_raw)) rv$selected_row <- nrow(rv$data_raw)
-  })
-  
-  observeEvent(input$new_note, {
-    rv$selected_row <- NULL
-    updateTextAreaInput(session, "note_text", value = "")
-  })
-  
-  observeEvent(input$delete_note, {
-    sel <- rv$selected_row
-    if (!is.null(sel) && length(sel) == 1 && !is.na(sel) &&
-        !is.null(rv$data_raw) && nrow(rv$data_raw) >= sel && sel >= 1) {
-      note_id <- rv$data_raw$id[sel]
-      delete_note_global(con, note_id)
-      rv$selected_row <- NULL
-      updateTextAreaInput(session, "note_text", value = "")
-      reload_notes()
-    }
-  })
-  
-  output$notes_table <- renderDT({
-    if (is.null(rv$data_raw) || nrow(rv$data_raw) == 0) {
-      dat <- data.frame(Note = character(), `Last Updated` = character(), check.names = FALSE)
-    } else {
-      dat <- data.frame(
-        Note = rv$data_raw$note_text,
-        `Last Updated` = rv$data_raw$updated_at,
-        check.names = FALSE,
-        stringsAsFactors = FALSE
-      )
-    }
-    datatable(dat, selection = "single", options = list(dom = "t", paging = FALSE), rownames = TRUE)
-  })
-  
-  observeEvent(input$notes_table_rows_selected, {
-    sel <- input$notes_table_rows_selected
-    rv$selected_row <- sel
-    if (!is.null(rv$data_raw) && length(sel) == 1 && !is.na(sel) &&
-        sel >= 1 && sel <= nrow(rv$data_raw)) {
-      updateTextAreaInput(session, "note_text", value = rv$data_raw$note_text[sel])
-    }
-  }, ignoreInit = TRUE)
+  notesServer("sec1", con, section_key = "OMF Heatmap")
+  notesServer("sec2", con, section_key = "OMF Data Explorer")
+  notesServer("sec3", con, section_key = "OMF Longitudinal")
+  notesServer("sec4", con, section_key = "GMS World Map")
+  notesServer("sec5", con, section_key = "GMS Africa Map")
+  notesServer("sec6", con, section_key = "GMS Asia Map")
+  notesServer("sec7", con, section_key = "GMS LatAm Map")
+  notesServer("sec8", con, section_key = "GMS Data Explorer")
+  notesServer("sec9", con, section_key = "GMS Longitudinal")
   
   
   # Reactive GMS dataset
@@ -836,21 +877,9 @@ server <- function(input, output, session) {
                            <li>21.4% major progress occurred in somewhat unfavorable contexts — showing resilience despite structural barriers.</li>
                            <li>14.3% moderate and 14.3% minor progress also advanced in unfavorable conditions, reflecting strong adaptation, long-term accompaniment, and embedded advocacy strategies.</li></ul>")),
                    br(),
-                   textAreaInput(
-                     "note_text",
-                     label = "Add or edit a note:",
-                     placeholder = "Type your note here...",
-                     width = "100%",
-                     height = "120px"
-                   ),
                    fluidRow(
-                     column(4, actionButton("add_update", "Add / Update", class = "btn-primary", width = "100%")),
-                     column(4, actionButton("new_note", "New Note", width = "100%")),
-                     column(4, actionButton("delete_note", "Delete Selected", class = "btn-danger", width = "100%"))
+                     notesUI("sec1", "OMF Heatmap")
                    ),
-                   br(),
-                   h4("All notes"),
-                   DTOutput("notes_table"),
                    br(),
                    tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
                  )
@@ -872,7 +901,7 @@ server <- function(input, output, session) {
            "OMF Data Explorer" = fluidPage(
              fluidRow(
                column(
-                 width = 3,
+                 width = 5,
                  wellPanel(
                  selectInput("omf_record_type", "Record Type", choices = NULL),
                  selectInput("omf_core_pillar", "Core Pillar", choices = NULL),
@@ -890,11 +919,18 @@ server <- function(input, output, session) {
                          <li>Comprehensive View: Lists all AJWS outcomes and milestones across the 2023–2026 strategy period, giving visibility into the scope of strategy implementation.</li>
                          <li>Custom Filters: Users can sort by region, issue area, or grantee issue area to surface the outcomes and milestones most relevant to their interests.</li>
                          <li>Focused Learning Tool: Filtering enables review of the types of outcomes and milestones AJWS is tracking, supporting reflection on areas of strategic emphasis without displaying progress data.</li></ul>")
+               ),
+               br(),
+               fluidRow(
+                 notesUI("sec2", "OMF Data Explorer")
+               ),
+               br(),
+               tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
                )
-               )),
+               ),
                column(
                  h3("OMF Data Explorer 🧭"),
-                 width = 9,
+                 width = 7,
                  p("Explore OMF entries below. Records are dynamically selected based on the filters selected."),
                  DTOutput("omf_explorer_table")
                )
@@ -903,7 +939,7 @@ server <- function(input, output, session) {
            "OMF Longitudinal" = fluidPage(
              fluidRow(
                column(
-                 width = 3,
+                 width = 5,
                  wellPanel(
                  selectInput("long_record_type", "Select Record Type:", 
                              choices = c("All", "Milestone", "Outcome"), selected = "All"),
@@ -922,12 +958,18 @@ server <- function(input, output, session) {
                  p(HTML("<ul>
                          <li>Decline across all categories: Outcome updates fell from 2023 to 2024, with minor progress showing the steepest drop.</li>
                          <li>Context matters: Shifts align with U.S. funding cuts and AJWS restructuring that reduced countries and strategies.</li></ul>")),
-                 p("Early insights: Trends help flag momentum, reporting gaps, and areas where strategies may need adjustment.")
+                 p("Early insights: Trends help flag momentum, reporting gaps, and areas where strategies may need adjustment."),
+                 br(),
+                 fluidRow(
+                   notesUI("sec3", "OMF Longitudinal")
+                 ),
+                 br(),
+                 tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
                )
                ),
                column(
                  h3("OMF Longitudinal 📈"),
-                 width = 9,
+                 width = 7,
                  plotlyOutput("longitudinal_chart", height = "600px"),
                  br(),
                  plotlyOutput("longitudinal_chart_perc", height = "600px")
@@ -952,7 +994,7 @@ server <- function(input, output, session) {
                    tabPanel("World Map", 
                             fluidRow(
                             column(
-                              width = 3,
+                              width = 5,
                               wellPanel(
                                 h5("📌 Notes"),
                                 p(HTML("<ul>
@@ -963,15 +1005,22 @@ server <- function(input, output, session) {
                                 p(HTML("<ul>
                                         <li>AJWS restructuring reduced active countries & strategies</li>
                                         <li>Shrinking civic space constrained partner operations</li>
-                                        <li>U.S. government funding cuts hit human rights & climate justice partners hardest</li></ul>"))
-                              )),
+                                        <li>U.S. government funding cuts hit human rights & climate justice partners hardest</li></ul>")),
+                                br(),
+                                fluidRow(
+                                  notesUI("sec4", "GMS World Map")
+                                ),
+                                br(),
+                                tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                              )
+                            ),
                               column(
-                                width = 9,
+                                width = 7,
                               leafletOutput("world_map", height = "600px")))),
                    tabPanel("Africa", 
                             fluidRow(
                               column(
-                                width = 3,
+                                width = 5,
                                 wellPanel(
                                   h5("📌 Notes"),
                                   p("Africa: Growth with Shifting Country Focus"),
@@ -979,10 +1028,17 @@ server <- function(input, output, session) {
                                          <li>$4.5M across 4 countries (up from $4.2M across 6 in FY2024)</li>
                                          <li>Kenya 34% (down from 38%) | Uganda 31% (up from 30%)</li>
                                          <li>Average grant size down: $26,636 vs. $30,303 in FY2024</li></ul>")),
-                                  p("Context: AJWS phased out DRC & Liberia, providing tie-off grants as part of strategic restructuring")
-                                )),
+                                  p("Context: AJWS phased out DRC & Liberia, providing tie-off grants as part of strategic restructuring"),
+                                  br(),
+                                  fluidRow(
+                                    notesUI("sec5", "GMS Africa Map")
+                                  ),
+                                  br(),
+                                  tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                                )
+                              ),
                               column(
-                                width = 9,
+                                width = 7,
                                 leafletOutput("africa_map", height = "600px"),
                                 br(),
                                 plotlyOutput("africa_pie"),
@@ -991,7 +1047,7 @@ server <- function(input, output, session) {
                    tabPanel("Asia", 
                             fluidRow(
                               column(
-                                width = 3,
+                                width = 5,
                                 wellPanel(
                                   h5("📌 Notes"),
                                   p("Asia: Shifts in Country Allocation"),
@@ -999,10 +1055,17 @@ server <- function(input, output, session) {
                                          <li>$6.5M in FY2025 (down from $6.7M in FY2024)</li>
                                          <li>India 27% (down sharply from 42% with conclusion of Kendeda ECM grants)</li>
                                          <li>Burma 22% (up from 18%) | Thailand 19% (up from 16%)</li>
-                                         <li>Average grant size up: $27,284 vs. $25,161 in FY2024</li></ul>"))
-                                )),
+                                         <li>Average grant size up: $27,284 vs. $25,161 in FY2024</li></ul>")),
+                                  br(),
+                                  fluidRow(
+                                    notesUI("sec6", "GMS Asia Map")
+                                  ),
+                                  br(),
+                                  tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                                )
+                              ),
                               column(
-                                width = 9,
+                                width = 7,
                                 leafletOutput("asia_map", height = "600px"),
                                 br(),
                                 plotlyOutput("asia_pie"),
@@ -1011,17 +1074,24 @@ server <- function(input, output, session) {
                    tabPanel("Latin America and the Caribbean", 
                             fluidRow(
                               column(
-                                width = 3,
+                                width = 5,
                                 wellPanel(
                                   h5("📌 Notes"),
                                   p("Latin America & Caribbean: Slight Decline in Grantmaking"),
                                   p(HTML("<ul>
                                           <li>$4.9M across 6 countries (down from $5.2M in FY2024)</li>
                                           <li>Haiti 26% (down from 34%) | Dominican Republic 18% | Mexico 15% (both steady from FY2024)</li>
-                                          <li>Average grant size down: $24,846 vs. $26,223 in FY2024</li></ul>"))
-                                )),
+                                          <li>Average grant size down: $24,846 vs. $26,223 in FY2024</li></ul>")),
+                                  br(),
+                                  fluidRow(
+                                    notesUI("sec7", "GMS LatAm Map")
+                                  ),
+                                  br(),
+                                  tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                                )
+                              ),
                               column(
-                                width = 9,
+                                width = 7,
                                 leafletOutput("latam_map", height = "600px"),
                                 br(),
                                 plotlyOutput("latam_pie"),
@@ -1035,7 +1105,7 @@ server <- function(input, output, session) {
              #titlePanel("GMS Data Explorer 🧭"),
              fluidRow(
              column(
-               width = 3,
+               width = 5,
                wellPanel(
                  selectInput("gms_region", "Region:", choices = NULL),
                  selectInput("gms_grantee_region", "Grantee Region:", choices = NULL),
@@ -1051,12 +1121,18 @@ server <- function(input, output, session) {
                  p(HTML("<ul>
                          <li>Comprehensive View: Lists all AJWS grants and grantees across the 2023–2026 strategy period, providing visibility into the breadth of AJWS’s support.</li>
                          <li>Custom Filters: Users can sort by region, issue area, or grantee issue area to surface the types of grants and grantees most relevant to their interests.</li>
-                         <li>Focused Learning Tool: Filtering enables review of the types of grants and grantees AJWS supports, helping identify areas of emphasis and coverage without displaying progress data.</li></ul>"))
+                         <li>Focused Learning Tool: Filtering enables review of the types of grants and grantees AJWS supports, helping identify areas of emphasis and coverage without displaying progress data.</li></ul>")),
+                 br(),
+                 fluidRow(
+                   notesUI("sec8", "GMS Data Explorer")
+                 ),
+                 br(),
+                 tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
                )
              ),
              column(
                  h3("GMS Data Explorer 🧭"),
-                 width = 9,
+                 width = 7,
                  DTOutput("gms_explorer_table")
                )
              )
@@ -1065,16 +1141,22 @@ server <- function(input, output, session) {
              #titlePanel("GMS Data Explorer 🧭"),
              fluidRow(
                column(
-                 width = 3,
+                 width = 5,
                  br(),
                  wellPanel(
                    h5("📌 Notes"),
                    p("Explore Grants & Grantees Your Way"),
-                  )
+                   br(),
+                   fluidRow(
+                     notesUI("sec9", "GMS Longitudinal")
+                   ),
+                   br(),
+                   tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                 )
                ),
                column(
                  h3("GMS Longitudinal Data 📈"),
-                 width = 9,
+                 width = 7,
                  p("🚧 COMING SOON! 🚧")
                )
              )
