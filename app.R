@@ -89,9 +89,7 @@ notesUI <- function(id, section_title) {
       column(4, actionButton(ns("delete_note"), "Delete Selected", class = "btn-danger", width = "100%"))
     ),
     br(),
-    DTOutput(ns("notes_table")),
-    br(),
-    plotOutput(ns("plot"))
+    DTOutput(ns("notes_table"))
   )
 }
 
