@@ -489,6 +489,20 @@ ui <- page_sidebar(
 )
 
 server <- function(input, output, session) {
+  
+  options(shiny.fullstacktrace = TRUE)
+  
+  excel_path <- "FY25 AJWS Data_3JUL25.xlsx"
+  
+  omf_raw <- read.xlsx(excel_path, sheet = "OMF")
+  gms_raw <- read.xlsx(excel_path, sheet = "GMS FY25 1")
+  icc_raw <- read.xlsx(excel_path, sheet = "ICCs")
+  funding <- read.xlsx(excel_path, sheet = "funding_data")
+  gms_long_loc <- read.xlsx(excel_path, sheet = "gms_longitudinal", startRow = 18, rows = 18:22)
+  gms_long_reg <- read.xlsx(excel_path, sheet = "gms_longitudinal", startRow = 1, rows = 1:6)
+  gms_long_iss <- read.xlsx(excel_path, sheet = "gms_longitudinal", startRow = 10, rows = 10:15)
+  grant_dist <- read.xlsx(excel_path, sheet = "grant_distribution")
+  
   current_page <- reactiveVal("Home")
   
   observeEvent(input$go_home, current_page("Home"))
@@ -519,7 +533,7 @@ server <- function(input, output, session) {
   # Reactive GMS dataset
   gms_cleaned <- reactive({
     req(full_data())
-    df <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "GMS FY25 1") %>%
+    df <- gms_raw %>%
       mutate(
         Region = Region,
         GranteeRegion = Region.Grantee,
@@ -572,7 +586,7 @@ server <- function(input, output, session) {
   
   # Reactive for cleaned OMF data
   omf_cleaned <- reactive({
-    df <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "OMF")
+    df <- omf_raw
     
     # Check names if needed:
     # print(names(df))
@@ -690,7 +704,7 @@ server <- function(input, output, session) {
   })
   
   raw_data <- reactive({
-    read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "OMF") %>%
+    omf_raw %>%
       filter(Update.Year == 2024, Update.Type %in% c("Outcome", "Milestone")) %>%
       mutate(
         CorePillar = case_when(
@@ -733,7 +747,7 @@ server <- function(input, output, session) {
     data <- full_data()
     
     record_type_choices <- c("All Record Types", sort(unique(data$RecordType)))
-    omf_sheet <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "OMF")
+    omf_sheet <- omf_raw
     all_pillars <- omf_sheet  %>%
       mutate(
         CorePillar = case_when(
@@ -769,7 +783,7 @@ server <- function(input, output, session) {
     
     theme_choices <- c("All Thematic Areas", all_themes)
     
-    all_countries <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "OMF") %>%
+    all_countries <- omf_raw %>%
       pull(OMF.Country) %>%
       unique() %>%
       na.omit() %>%
@@ -1474,7 +1488,7 @@ server <- function(input, output, session) {
   
   # Data frame of values
   
-  world_df <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "funding_data")
+  world_df <- funding
   
   africa_countries <- c("DRC", "KENYA", "LIBERIA", "SENEGAL", "UGANDA", "SOUTH AFRICA")
   
@@ -1560,7 +1574,7 @@ server <- function(input, output, session) {
       )
   })
   
-  grant_dist_dat <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "grant_distribution")
+  grant_dist_dat <- grant_dist
   
   grant_dist_dat$Country <- grant_dist_dat$Country %>% recode("Asia Cross-regional" = "Asia Cross-Regional")
   
@@ -1811,7 +1825,7 @@ server <- function(input, output, session) {
   
   ### RENDER OMF DATA EXPLORER TABLE ###
   output$omf_explorer_table <- renderDT({
-    df <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "OMF") %>%
+    df <- omf_raw %>%
       filter(Update.Year == 2024, Update.Type %in% c("Outcome", "Milestone")) %>%
       mutate(
         Number = ifelse(Update.Type == "Outcome", Outcome.Number, Milestone.Number),
@@ -1914,7 +1928,7 @@ server <- function(input, output, session) {
   })
   
   
-  gms_locality_dat <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "gms_longitudinal", startRow = 18, rows = 18:22)
+  gms_locality_dat <- gms_long_loc
   
   locality_long <- gms_locality_dat %>%
     pivot_longer(
@@ -1955,7 +1969,7 @@ server <- function(input, output, session) {
   output$gms_locality <- renderPlotly({ p_locality })
   
   
-  gms_region_dat <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "gms_longitudinal", startRow = 1, rows = 1:6)
+  gms_region_dat <- gms_long_reg
   
   
   region_long <- gms_region_dat %>%
@@ -1996,7 +2010,7 @@ server <- function(input, output, session) {
   output$gms_region <- renderPlotly({ p_region })
   
   
-  gms_issue_area_dat <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "gms_longitudinal", startRow = 10, rows = 10:15)
+  gms_issue_area_dat <- gms_long_iss
   
   issue_long <- gms_issue_area_dat %>%
     pivot_longer(
