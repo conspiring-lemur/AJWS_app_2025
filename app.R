@@ -514,8 +514,9 @@ server <- function(input, output, session) {
   notesServer("sec6", con, section_key = "GMS Asia Map")
   notesServer("sec7", con, section_key = "GMS LatAm Map")
   notesServer("sec8", con, section_key = "GMS Data Explorer")
-  notesServer("sec9", con, section_key = "GMS Longitudinal")
-  
+  notesServer("sec9", con, section_key = "GMS By Work Level")
+  notesServer("sec10", con, section_key = "GMS By Region")
+  notesServer("sec11", con, section_key = "GMS By Issue Area")
   
   # Reactive GMS dataset
   gms_cleaned <- reactive({
@@ -1138,30 +1139,101 @@ server <- function(input, output, session) {
              )
            ),
            "GMS Longitudinal Data" = fluidPage(
-             #titlePanel("GMS Data Explorer 🧭"),
              fluidRow(
-               column(
-                 width = 5,
-                 br(),
-                 wellPanel(
-                   h5("📌 Notes"),
-                   p("Explore Grants & Grantees Your Way"),
-                   br(),
-                   fluidRow(
-                     notesUI("sec9", "GMS Longitudinal")
-                   ),
-                   br(),
-                   tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
-                 )
-               ),
-               column(
-                 h3("GMS Longitudinal Data 📈"),
-                 width = 7,
-                 p("🚧 COMING SOON! 🚧")
+               h3("GMS Longitudinal 📈"),
+               tabsetPanel(
+                 id = "gms_long_tabs",
+                 tabPanel("GMS By Work Level", 
+                          fluidRow(
+                            column(
+                              width = 5,
+                              wellPanel(
+                                h5("📌 Notes"),
+                                p(HTML("<ul>
+                                        <li>Note 1</li>
+                                        <li>Note 2</li>
+                                        <li>Note 3</li></ul>")),
+                                p("📌 Context Shaping Longitudinal Grantmaking"),
+                                p(HTML("<ul>
+                                        <li>Note 1</li>
+                                        <li>Note 2</li>
+                                        <li>Note 3</li></ul>")),
+                                br(),
+                                fluidRow(
+                                  notesUI("sec9", "GMS By Work Level")
+                                ),
+                                br(),
+                                tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                              )
+                            ),
+                            column(
+                              width = 7,
+
+                              ))),
+                 tabPanel("GMS By Region", 
+                          fluidRow(
+                            column(
+                              width = 5,
+                              wellPanel(
+                                h5("📌 Notes"),
+                                p("Main Note 1"),
+                                p(HTML("<ul>
+                                         <li>Note 1</li>
+                                         <li>Note 2</li>
+                                         <li>Note 3</li></ul>")),
+                                p("Context: Contextual Note 1"),
+                                br(),
+                                fluidRow(
+                                  notesUI("sec10", "GMS By Region")
+                                ),
+                                br(),
+                                tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                              )
+                            ),
+                            column(
+                              width = 7,
+
+                              br(),
+
+                              br()
+
+                              )
+                            )
+                          ),
+                 tabPanel("GMS By Issue Area", 
+                          fluidRow(
+                            column(
+                              width = 5,
+                              wellPanel(
+                                h5("📌 Notes"),
+                                p("Main Note 1"),
+                                p(HTML("<ul>
+                                         <li>Note 1</li>
+                                         <li>Note 2</li>
+                                         <li>Note 3</li>
+                                         <li>Note 4</li></ul>")),
+                                br(),
+                                fluidRow(
+                                  notesUI("sec11", "GMS By Issue Area")
+                                ),
+                                br(),
+                                tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                              )
+                            ),
+                            column(
+                              width = 7,
+
+                              br(),
+
+                              br()
+                              
+                              )
+                            )
+                          )
                )
              )
            )
-           )
+    )  
   })
   
   observeEvent(input$reset_filters, {
