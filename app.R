@@ -735,8 +735,8 @@ server <- function(input, output, session) {
     data <- full_data()
     
     record_type_choices <- c("All Record Types", sort(unique(data$RecordType)))
-    
-    all_pillars <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "OMF") %>%
+    omf_sheet <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "OMF")
+    all_pillars <- omf_sheet  %>%
       mutate(
         CorePillar = case_when(
           Update.Type == "Outcome" ~ Outcome.Category,
@@ -751,7 +751,7 @@ server <- function(input, output, session) {
     pillar_choices <- c("All Core Pillars", all_pillars)
     
     
-    all_themes <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "OMF") %>%
+    all_themes <- omf_sheet %>%
       mutate(OMF.Strategy = case_when(
         str_starts(OMF.Strategy, "Advocacy") ~ "Advocacy",
         str_starts(OMF.Strategy, "CPR - Thematic") ~ "CPR - Thematic",
