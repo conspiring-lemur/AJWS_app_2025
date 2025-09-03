@@ -485,7 +485,7 @@ ui <- page_sidebar(
       actionButton("go_gms_data_explorer", "🧭 GMS Data Explorer", class = "btn btn-outline-primary"),
       actionButton("go_gms_longitudinal", "📈 GMS Longitudinal", class = "btn btn-outline-primary")
     )
-  
+    
   ),
   uiOutput("main_ui")
 )
@@ -701,17 +701,17 @@ server <- function(input, output, session) {
           TRUE ~ NA_character_
         ),
         ThematicArea = case_when(
-    str_starts(OMF.Strategy, "Advocacy") ~ "Advocacy",
-    str_starts(OMF.Strategy, "CPR - Thematic") ~ "CPR - Thematic",
-    str_starts(OMF.Strategy, "CPR") ~ "CPR",
-    str_starts(OMF.Strategy, "Humanitarian Response") ~ "Humanitarian Response",
-    str_starts(OMF.Strategy, "LWCJ - Thematic") ~ "LWCJ - Thematic",
-    str_starts(OMF.Strategy, "LWCJ") ~ "LWCJ",
-    str_starts(OMF.Strategy, "SHR - Thematic") ~ "SHR - Thematic",
-    str_detect(OMF.Strategy, "SHR.*non ECM") ~ "SHR (non ECM)",
-    str_starts(OMF.Strategy, "SHR") ~ "SHR",
-    TRUE ~ "Other"
-  ),
+          str_starts(OMF.Strategy, "Advocacy") ~ "Advocacy",
+          str_starts(OMF.Strategy, "CPR - Thematic") ~ "CPR - Thematic",
+          str_starts(OMF.Strategy, "CPR") ~ "CPR",
+          str_starts(OMF.Strategy, "Humanitarian Response") ~ "Humanitarian Response",
+          str_starts(OMF.Strategy, "LWCJ - Thematic") ~ "LWCJ - Thematic",
+          str_starts(OMF.Strategy, "LWCJ") ~ "LWCJ",
+          str_starts(OMF.Strategy, "SHR - Thematic") ~ "SHR - Thematic",
+          str_detect(OMF.Strategy, "SHR.*non ECM") ~ "SHR (non ECM)",
+          str_starts(OMF.Strategy, "SHR") ~ "SHR",
+          TRUE ~ "Other"
+        ),
         Progress = Change,
         Context = Context,
         RecordType = Update.Type,
@@ -770,7 +770,7 @@ server <- function(input, output, session) {
       pull(OMF.Strategy)
     
     theme_choices <- c("All Thematic Areas", all_themes)
-  
+    
     all_countries <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "OMF") %>%
       pull(OMF.Country) %>%
       unique() %>%
@@ -905,30 +905,30 @@ server <- function(input, output, session) {
                column(
                  width = 5,
                  wellPanel(
-                 selectInput("omf_record_type", "Record Type", choices = NULL),
-                 selectInput("omf_core_pillar", "Core Pillar", choices = NULL),
-                 selectInput("omf_thematic_area", "Thematic Area", choices = NULL),
-                 selectInput("omf_country", "Country", choices = country_choices),
-                 selectInput("omf_progress", "Progress", choices = NULL),
-                 selectInput("omf_context", "Context", choices = NULL),
-                 actionButton("reset_omf_explorer", "Reset Filters", class = "btn btn-warning")
-               ),
-               br(),
-               wellPanel(
-                 h5("📌 Notes"),
-                 p("Explore Outcomes & Milestones Your Way"),
-                 p(HTML("<ul>
+                   selectInput("omf_record_type", "Record Type", choices = NULL),
+                   selectInput("omf_core_pillar", "Core Pillar", choices = NULL),
+                   selectInput("omf_thematic_area", "Thematic Area", choices = NULL),
+                   selectInput("omf_country", "Country", choices = country_choices),
+                   selectInput("omf_progress", "Progress", choices = NULL),
+                   selectInput("omf_context", "Context", choices = NULL),
+                   actionButton("reset_omf_explorer", "Reset Filters", class = "btn btn-warning")
+                 ),
+                 br(),
+                 wellPanel(
+                   h5("📌 Notes"),
+                   p("Explore Outcomes & Milestones Your Way"),
+                   p(HTML("<ul>
                          <li>Comprehensive View: Lists all AJWS outcomes and milestones across the 2023–2026 strategy period, giving visibility into the scope of strategy implementation.</li>
                          <li>Custom Filters: Users can sort by region, issue area, or grantee issue area to surface the outcomes and milestones most relevant to their interests.</li>
                          <li>Focused Learning Tool: Filtering enables review of the types of outcomes and milestones AJWS is tracking, supporting reflection on areas of strategic emphasis without displaying progress data.</li></ul>")
-               ),
-               br(),
-               fluidRow(
-                 notesUI("sec2", "OMF Data Explorer")
-               ),
-               br(),
-               tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
-               )
+                   ),
+                   br(),
+                   fluidRow(
+                     notesUI("sec2", "OMF Data Explorer")
+                   ),
+                   br(),
+                   tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                 )
                ),
                column(
                  h3("OMF Data Explorer 🧭"),
@@ -943,31 +943,31 @@ server <- function(input, output, session) {
                column(
                  width = 5,
                  wellPanel(
-                 selectInput("long_record_type", "Select Record Type:", 
-                             choices = c("All", "Milestone", "Outcome"), selected = "All"),
-                 selectInput("long_core_pillar", "Select Core Pillar:", 
-                             choices = NULL, selected = "All"),
-                 selectInput("long_thematic_area", "Select Thematic Area:", 
-                             choices = NULL, selected = "All"),
-                 selectInput("long_country", "Select Country:", 
-                             choices = NULL, selected = "All"),
-                 actionButton("long_reset_filters", "Reset Filters", class = "btn btn-warning")
-               ),
-               br(),
-               wellPanel(
-                 h5("📌 Notes"),
-                 p("Longitudinal Outcomes: Early Strategy Signals"),
-                 p(HTML("<ul>
-                         <li>Decline across all categories: Outcome updates fell from 2023 to 2024, with minor progress showing the steepest drop.</li>
-                         <li>Context matters: Shifts align with U.S. funding cuts and AJWS restructuring that reduced countries and strategies.</li></ul>")),
-                 p("Early insights: Trends help flag momentum, reporting gaps, and areas where strategies may need adjustment."),
-                 br(),
-                 fluidRow(
-                   notesUI("sec3", "OMF Longitudinal")
+                   selectInput("long_record_type", "Select Record Type:", 
+                               choices = c("All", "Milestone", "Outcome"), selected = "All"),
+                   selectInput("long_core_pillar", "Select Core Pillar:", 
+                               choices = NULL, selected = "All"),
+                   selectInput("long_thematic_area", "Select Thematic Area:", 
+                               choices = NULL, selected = "All"),
+                   selectInput("long_country", "Select Country:", 
+                               choices = NULL, selected = "All"),
+                   actionButton("long_reset_filters", "Reset Filters", class = "btn btn-warning")
                  ),
                  br(),
-                 tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
-               )
+                 wellPanel(
+                   h5("📌 Notes"),
+                   p("Longitudinal Outcomes: Early Strategy Signals"),
+                   p(HTML("<ul>
+                         <li>Decline across all categories: Outcome updates fell from 2023 to 2024, with minor progress showing the steepest drop.</li>
+                         <li>Context matters: Shifts align with U.S. funding cuts and AJWS restructuring that reduced countries and strategies.</li></ul>")),
+                   p("Early insights: Trends help flag momentum, reporting gaps, and areas where strategies may need adjustment."),
+                   br(),
+                   fluidRow(
+                     notesUI("sec3", "OMF Longitudinal")
+                   ),
+                   br(),
+                   tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                 )
                ),
                column(
                  h3("OMF Longitudinal 📈"),
@@ -990,11 +990,11 @@ server <- function(input, output, session) {
            ),
            "GMS Mapping" = fluidPage(
              fluidRow(
-                 h3("GMS Mapping 🗺"),
-                 tabsetPanel(
-                   id = "gms_map_tabs",
-                   tabPanel("World Map", 
-                            fluidRow(
+               h3("GMS Mapping 🗺"),
+               tabsetPanel(
+                 id = "gms_map_tabs",
+                 tabPanel("World Map", 
+                          fluidRow(
                             column(
                               width = 5,
                               wellPanel(
@@ -1016,123 +1016,123 @@ server <- function(input, output, session) {
                                 tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
                               )
                             ),
-                              column(
-                                width = 7,
+                            column(
+                              width = 7,
                               leafletOutput("world_map", height = "600px")))),
-                   tabPanel("Africa", 
-                            fluidRow(
-                              column(
-                                width = 5,
-                                wellPanel(
-                                  h5("📌 Notes"),
-                                  p("Africa: Growth with Shifting Country Focus"),
-                                  p(HTML("<ul>
+                 tabPanel("Africa", 
+                          fluidRow(
+                            column(
+                              width = 5,
+                              wellPanel(
+                                h5("📌 Notes"),
+                                p("Africa: Growth with Shifting Country Focus"),
+                                p(HTML("<ul>
                                          <li>$4.5M across 4 countries (up from $4.2M across 6 in FY2024)</li>
                                          <li>Kenya 34% (down from 38%) | Uganda 31% (up from 30%)</li>
                                          <li>Average grant size down: $26,636 vs. $30,303 in FY2024</li></ul>")),
-                                  p("Context: AJWS phased out DRC & Liberia, providing tie-off grants as part of strategic restructuring"),
-                                  br(),
-                                  fluidRow(
-                                    notesUI("sec5", "GMS Africa Map")
-                                  ),
-                                  br(),
-                                  tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
-                                )
-                              ),
-                              column(
-                                width = 7,
-                                leafletOutput("africa_map", height = "600px"),
+                                p("Context: AJWS phased out DRC & Liberia, providing tie-off grants as part of strategic restructuring"),
                                 br(),
-                                plotlyOutput("africa_pie"),
+                                fluidRow(
+                                  notesUI("sec5", "GMS Africa Map")
+                                ),
                                 br(),
-                                dataTableOutput("africa_dat")))),
-                   tabPanel("Asia", 
-                            fluidRow(
-                              column(
-                                width = 5,
-                                wellPanel(
-                                  h5("📌 Notes"),
-                                  p("Asia: Shifts in Country Allocation"),
-                                  p(HTML("<ul>
+                                tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                              )
+                            ),
+                            column(
+                              width = 7,
+                              leafletOutput("africa_map", height = "600px"),
+                              br(),
+                              plotlyOutput("africa_pie"),
+                              br(),
+                              dataTableOutput("africa_dat")))),
+                 tabPanel("Asia", 
+                          fluidRow(
+                            column(
+                              width = 5,
+                              wellPanel(
+                                h5("📌 Notes"),
+                                p("Asia: Shifts in Country Allocation"),
+                                p(HTML("<ul>
                                          <li>$6.5M in FY2025 (down from $6.7M in FY2024)</li>
                                          <li>India 27% (down sharply from 42% with conclusion of Kendeda ECM grants)</li>
                                          <li>Burma 22% (up from 18%) | Thailand 19% (up from 16%)</li>
                                          <li>Average grant size up: $27,284 vs. $25,161 in FY2024</li></ul>")),
-                                  br(),
-                                  fluidRow(
-                                    notesUI("sec6", "GMS Asia Map")
-                                  ),
-                                  br(),
-                                  tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
-                                )
-                              ),
-                              column(
-                                width = 7,
-                                leafletOutput("asia_map", height = "600px"),
                                 br(),
-                                plotlyOutput("asia_pie"),
+                                fluidRow(
+                                  notesUI("sec6", "GMS Asia Map")
+                                ),
                                 br(),
-                                dataTableOutput("asia_dat")))),
-                   tabPanel("Latin America and the Caribbean", 
-                            fluidRow(
-                              column(
-                                width = 5,
-                                wellPanel(
-                                  h5("📌 Notes"),
-                                  p("Latin America & Caribbean: Slight Decline in Grantmaking"),
-                                  p(HTML("<ul>
+                                tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                              )
+                            ),
+                            column(
+                              width = 7,
+                              leafletOutput("asia_map", height = "600px"),
+                              br(),
+                              plotlyOutput("asia_pie"),
+                              br(),
+                              dataTableOutput("asia_dat")))),
+                 tabPanel("Latin America and the Caribbean", 
+                          fluidRow(
+                            column(
+                              width = 5,
+                              wellPanel(
+                                h5("📌 Notes"),
+                                p("Latin America & Caribbean: Slight Decline in Grantmaking"),
+                                p(HTML("<ul>
                                           <li>$4.9M across 6 countries (down from $5.2M in FY2024)</li>
                                           <li>Haiti 26% (down from 34%) | Dominican Republic 18% | Mexico 15% (both steady from FY2024)</li>
                                           <li>Average grant size down: $24,846 vs. $26,223 in FY2024</li></ul>")),
-                                  br(),
-                                  fluidRow(
-                                    notesUI("sec7", "GMS LatAm Map")
-                                  ),
-                                  br(),
-                                  tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
-                                )
-                              ),
-                              column(
-                                width = 7,
-                                leafletOutput("latam_map", height = "600px"),
                                 br(),
-                                plotlyOutput("latam_pie"),
+                                fluidRow(
+                                  notesUI("sec7", "GMS LatAm Map")
+                                ),
                                 br(),
-                                dataTableOutput("latam_dat")))),
-                 )
+                                tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                              )
+                            ),
+                            column(
+                              width = 7,
+                              leafletOutput("latam_map", height = "600px"),
+                              br(),
+                              plotlyOutput("latam_pie"),
+                              br(),
+                              dataTableOutput("latam_dat")))),
+               )
              )
            )
            ,
            "GMS Data Explorer" = fluidPage(
              #titlePanel("GMS Data Explorer 🧭"),
              fluidRow(
-             column(
-               width = 5,
-               wellPanel(
-                 selectInput("gms_region", "Region:", choices = NULL),
-                 selectInput("gms_grantee_region", "Grantee Region:", choices = NULL),
-                 selectInput("gms_geo_area", "Geographical Area Served:", choices = NULL),
-                 selectInput("gms_issue_grants", "Issue Area (Grants):", choices = NULL),
-                 selectInput("gms_issue_grantees", "Issue Area (Grantees):", choices = NULL),
-                 actionButton("gms_reset_filters", "Reset Filters", class = "btn btn-warning")
-               ),
-               br(),
-               wellPanel(
-                 h5("📌 Notes"),
-                 p("Explore Grants & Grantees Your Way"),
-                 p(HTML("<ul>
+               column(
+                 width = 5,
+                 wellPanel(
+                   selectInput("gms_region", "Region:", choices = NULL),
+                   selectInput("gms_grantee_region", "Grantee Region:", choices = NULL),
+                   selectInput("gms_geo_area", "Geographical Area Served:", choices = NULL),
+                   selectInput("gms_issue_grants", "Issue Area (Grants):", choices = NULL),
+                   selectInput("gms_issue_grantees", "Issue Area (Grantees):", choices = NULL),
+                   actionButton("gms_reset_filters", "Reset Filters", class = "btn btn-warning")
+                 ),
+                 br(),
+                 wellPanel(
+                   h5("📌 Notes"),
+                   p("Explore Grants & Grantees Your Way"),
+                   p(HTML("<ul>
                          <li>Comprehensive View: Lists all AJWS grants and grantees across the 2023–2026 strategy period, providing visibility into the breadth of AJWS’s support.</li>
                          <li>Custom Filters: Users can sort by region, issue area, or grantee issue area to surface the types of grants and grantees most relevant to their interests.</li>
                          <li>Focused Learning Tool: Filtering enables review of the types of grants and grantees AJWS supports, helping identify areas of emphasis and coverage without displaying progress data.</li></ul>")),
-                 br(),
-                 fluidRow(
-                   notesUI("sec8", "GMS Data Explorer")
-                 ),
-                 br(),
-                 tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
-               )
-             ),
-             column(
+                   br(),
+                   fluidRow(
+                     notesUI("sec8", "GMS Data Explorer")
+                   ),
+                   br(),
+                   tags$small(em("Stored in "), code(DB_PATH), em(" (shared across all users)."))
+                 )
+               ),
+               column(
                  h3("GMS Data Explorer 🧭"),
                  width = 7,
                  DTOutput("gms_explorer_table")
@@ -1169,8 +1169,9 @@ server <- function(input, output, session) {
                             ),
                             column(
                               width = 7,
-
-                              ))),
+                              plotlyOutput("gms_locality")
+                              
+                            ))),
                  tabPanel("GMS By Region", 
                           fluidRow(
                             column(
@@ -1193,14 +1194,11 @@ server <- function(input, output, session) {
                             ),
                             column(
                               width = 7,
-
-                              br(),
-
-                              br()
-
-                              )
+                              plotlyOutput("gms_region")
+                              
                             )
-                          ),
+                          )
+                 ),
                  tabPanel("GMS By Issue Area", 
                           fluidRow(
                             column(
@@ -1223,14 +1221,11 @@ server <- function(input, output, session) {
                             ),
                             column(
                               width = 7,
-
-                              br(),
-
-                              br()
+                              plotlyOutput("gms_issue_area")
                               
-                              )
                             )
                           )
+                 )
                )
              )
            )
@@ -1365,12 +1360,12 @@ server <- function(input, output, session) {
       datatable(options = list(dom = 't'), rownames = FALSE)
   })
   
-    # Coordinates for each region's pie chart
-    coords <- data.frame(
-      region = c("Americas", "Africa", "Asia", "Asia ECM", "Cross-Regional"),
-      lat = c(23.91, 17.34, 36.68, 36.68, 35),  # adjust as needed
-      lng = c(-102.22, 9.27, 103.45, 103.45, -40)
-    )
+  # Coordinates for each region's pie chart
+  coords <- data.frame(
+    region = c("Americas", "Africa", "Asia", "Asia ECM", "Cross-Regional"),
+    lat = c(23.91, 17.34, 36.68, 36.68, 35),  # adjust as needed
+    lng = c(-102.22, 9.27, 103.45, 103.45, -40)
+  )
   
   # Pie data (make sure column names match coords$region order)
   pie_data <- data.frame(
@@ -1480,7 +1475,7 @@ server <- function(input, output, session) {
   })
   
   # Data frame of values
-
+  
   world_df <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "funding_data")
   
   africa_countries <- c("DRC", "KENYA", "LIBERIA", "SENEGAL", "UGANDA", "SOUTH AFRICA")
@@ -1565,7 +1560,7 @@ server <- function(input, output, session) {
           )
         )
       )
-    })
+  })
   
   grant_dist_dat <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "grant_distribution")
   
@@ -1578,11 +1573,11 @@ server <- function(input, output, session) {
   output$africa_pie <- renderPlotly({ 
     
     plot_ly(africa_dist_dat, labels = ~Country, values = ~Dollars, type = 'pie',
-                        marker = list(colors = custom_colors,
-                                      line = list(color = '#FFFFFF', width = 1))) %>%
-    layout(
-      title = 'Africa Grant Distribution')# Optional: add white borders
-  
+            marker = list(colors = custom_colors,
+                          line = list(color = '#FFFFFF', width = 1))) %>%
+      layout(
+        title = 'Africa Grant Distribution')# Optional: add white borders
+    
   })
   
   
@@ -1591,10 +1586,10 @@ server <- function(input, output, session) {
   africa_datatable$Dollars <- africa_datatable$Dollars %>% dollar()
   
   output$africa_dat <- renderDataTable({ DT::datatable(africa_datatable,
-                options = list(
-                  dom = 't',
-                  ordering = TRUE,
-                  pageLength = nrow(africa_datatable)))})
+                                                       options = list(
+                                                         dom = 't',
+                                                         ordering = TRUE,
+                                                         pageLength = nrow(africa_datatable)))})
   
   # Data frame of values
   
@@ -1700,13 +1695,13 @@ server <- function(input, output, session) {
   asia_datatable$Dollars <- asia_datatable$Dollars %>% dollar()
   
   output$asia_dat <- renderDataTable({ DT::datatable(asia_datatable,
-                                                       options = list(
-                                                         dom = 't',
-                                                         ordering = TRUE,
-                                                         pageLength = nrow(asia_datatable)))})
+                                                     options = list(
+                                                       dom = 't',
+                                                       ordering = TRUE,
+                                                       pageLength = nrow(asia_datatable)))})
   
   # Data frame of values
- 
+  
   latam_countries <- c("DOMINICAN REPUBLIC", "EL SALVADOR", "GUATEMALA", "HAITI", "MEXICO", "NICARAGUA")
   
   
@@ -1810,10 +1805,10 @@ server <- function(input, output, session) {
   latam_datatable$Dollars <- latam_datatable$Dollars %>% dollar()
   
   output$latam_dat <- renderDataTable({ DT::datatable(latam_datatable,
-                                                       options = list(
-                                                         dom = 't',
-                                                         ordering = TRUE,
-                                                         pageLength = nrow(latam_datatable)))})
+                                                      options = list(
+                                                        dom = 't',
+                                                        ordering = TRUE,
+                                                        pageLength = nrow(latam_datatable)))})
   
   
   ### RENDER OMF DATA EXPLORER TABLE ###
@@ -1919,6 +1914,129 @@ server <- function(input, output, session) {
     ) %>%
       formatStyle(columns = names(full_text), color = "black")
   })
+  
+  
+  gms_locality_dat <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "gms_longitudinal", startRow = 18, rows = 18:22)
+  
+  locality_long <- gms_locality_dat %>%
+    pivot_longer(
+      cols = starts_with("FY"), # Select columns starting with "Sales_"
+      names_to = "Year",          # New column for the variable names
+      values_to = "Amount"           # New column for the values
+    )
+  
+  locality_long <- locality_long %>% mutate(Year = str_remove(Year, "FY") %>% as.numeric,
+                                            Dollar.Amount = scales::dollar(Amount),
+                                            tooltip_text = paste0(
+                                              "Year: ", Year, "<br>",
+                                              "Amount: ", scales::dollar(Amount), "<br>",
+                                              "locality Area: ", Locality
+                                            ))
+  
+  locality_long %>% print(n = Inf)
+  
+  g_locality <- ggplot(locality_long) +
+    geom_line(aes(x = Year, y = Amount, group = Locality, color = Locality, text = tooltip_text), linewidth = 2, alpha = .5) +
+    theme(title = element_text(hjust = .5)) +
+    scale_y_continuous(limits = c(0, 10000000), 
+                       breaks = c(0, 2000000, 4000000, 6000000, 8000000, 10000000),
+                       labels = scales::dollar_format()) +
+    scale_x_continuous(limits = c(2017, 2025), 
+                       breaks = c(2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025)) +
+    theme_bw() +
+    ggtitle("Core Grants by Locality")
+  
+  p_locality <- ggplotly(g_locality, tooltip = "text") %>% 
+    layout(
+      yaxis = list(
+        tickformat = "$,",
+        exponentformat = "none"
+      )
+    )
+  
+  output$gms_locality <- renderPlotly({ p_locality })
+  
+  
+  gms_region_dat <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "gms_longitudinal", startRow = 1, rows = 1:6)
+  
+  
+  region_long <- gms_region_dat %>%
+    pivot_longer(
+      cols = starts_with("FY"), # Select columns starting with "Sales_"
+      names_to = "Year",          # New column for the variable names
+      values_to = "Amount"           # New column for the values
+    )
+  
+  region_long <- region_long %>% mutate(Year = str_remove(Year, "FY") %>% as.numeric,
+                                        Dollar.Amount = scales::dollar(Amount),
+                                        tooltip_text = paste0(
+                                          "Year: ", Year, "<br>",
+                                          "Amount: ", scales::dollar(Amount), "<br>",
+                                          "Region: ", Region
+                                        ))
+  
+  
+  g_region <- ggplot(region_long) +
+    geom_line(aes(x = Year, y = Amount, group = Region, color = Region, text = tooltip_text), linewidth = 2, alpha = .5) +
+    theme(title = element_text(hjust = .5)) +
+    scale_y_continuous(limits = c(0, 10000000), 
+                       breaks = c(0, 2000000, 4000000, 6000000, 8000000, 10000000),
+                       labels = scales::dollar_format()) +
+    scale_x_continuous(limits = c(2013, 2025), 
+                       breaks = c(2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025)) +
+    theme_bw() +
+    ggtitle("Core Grants by Region")
+  
+  p_region <- ggplotly(g_region, tooltip = "text") %>% 
+    layout(
+      yaxis = list(
+        tickformat = "$,",
+        exponentformat = "none"
+      )
+    )
+  
+  output$gms_region <- renderPlotly({ p_region })
+  
+  
+  gms_issue_area_dat <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "gms_longitudinal", startRow = 10, rows = 10:15)
+  
+  issue_long <- gms_issue_area_dat %>%
+    pivot_longer(
+      cols = starts_with("FY"), # Select columns starting with "Sales_"
+      names_to = "Year",          # New column for the variable names
+      values_to = "Amount"           # New column for the values
+    )
+  
+  issue_long <- issue_long %>% mutate(Year = str_remove(Year, "FY") %>% as.numeric,
+                                      Dollar.Amount = scales::dollar(Amount),
+                                      tooltip_text = paste0(
+                                        "Year: ", Year, "<br>",
+                                        "Amount: ", scales::dollar(Amount), "<br>",
+                                        "Issue Area: ", Issue.Area
+                                      ))
+  
+  
+  g_issue <- ggplot(issue_long) +
+    geom_line(aes(x = Year, y = Amount, group = Issue.Area, color = Issue.Area, text = tooltip_text), linewidth = 2, alpha = .5) +
+    theme(title = element_text(hjust = .5)) +
+    scale_y_continuous(limits = c(0, 8000000), 
+                       breaks = c(0, 500000, 2000000, 3500000, 5000000, 6500000, 8000000),
+                       labels = scales::dollar_format()) +
+    scale_x_continuous(limits = c(2013, 2025), 
+                       breaks = c(2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025)) +
+    theme_bw() +
+    ggtitle("Core Grants by Issue Area")
+  
+  p_issue <- ggplotly(g_issue, tooltip = "text") %>% 
+    layout(
+      yaxis = list(
+        tickformat = "$,",
+        exponentformat = "none"
+      )
+    )
+  
+  output$gms_issue_area <- renderPlotly({ p_issue })
+  
   
 }
 
