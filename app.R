@@ -747,23 +747,23 @@ server <- function(input, output, session) {
     data <- full_data()
     
     record_type_choices <- c("All Record Types", sort(unique(data$RecordType)))
-    omf_sheet <- omf_raw
-    all_pillars <- omf_sheet  %>%
+
+    all_pillars <- omf_raw  %>%
       mutate(
         CorePillar = case_when(
           Update.Type == "Outcome" ~ Outcome.Category,
           Update.Type == "Milestone" ~ Milestone.Category,
           TRUE ~ NA_character_
         )) %>%
-      pull(CorePillar) %>%
+      select(CorePillar) %>%
       unique() %>%
-      na.omit() %>%
-      sort()
+      arrange(CorePillar) %>%
+      pull(CorePillar)
     
     pillar_choices <- c("All Core Pillars", all_pillars)
     
     
-    all_themes <- omf_sheet %>%
+    all_themes <- omf_raw %>%
       mutate(OMF.Strategy = case_when(
         str_starts(OMF.Strategy, "Advocacy") ~ "Advocacy",
         str_starts(OMF.Strategy, "CPR - Thematic") ~ "CPR - Thematic",
