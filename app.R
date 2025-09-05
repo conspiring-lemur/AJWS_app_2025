@@ -489,6 +489,11 @@ ui <- page_sidebar(
 )
 
 server <- function(input, output, session) {
+  withProgress("Starting app...", value = 0,{
+    incProgress(0.2, "Loading data...")
+    incProgress(0.6, "Building UI")
+    incProgress(0.2, "Done")
+  })
   
   options(shiny.fullstacktrace = TRUE)
   
@@ -1243,6 +1248,9 @@ server <- function(input, output, session) {
            )
     )  
   })
+  
+  ## Drop Observe and ObserveEvent here
+  
   
   observeEvent(input$reset_filters, {
     updateSelectInput(session, "record_type_select", selected = "All Record Types")
