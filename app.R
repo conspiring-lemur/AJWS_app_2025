@@ -489,6 +489,7 @@ ui <- page_sidebar(
 )
 
 server <- function(input, output, session) {
+  
   withProgress("Starting app...", value = 0,{
     incProgress(0.2, "Loading data...")
     incProgress(0.6, "Building UI")
@@ -753,17 +754,26 @@ server <- function(input, output, session) {
     
     record_type_choices <- c("All Record Types", sort(unique(data$RecordType)))
 
-    all_pillars <- omf_raw  %>%
-      mutate(
-        CorePillar = case_when(
-          Update.Type == "Outcome" ~ Outcome.Category,
+    data <- if (isTRUE(inherits(omf_raw, "reactive"))) omf_raw() else omf_raw
+    
+    stopifnot(all(c("Update.Type","Outcome.Category","Milestone.Category") %in% names(data)))
+    
+    all_pillars <- data %>%
+      dplyr::mutate(
+        Update.Type        = trimws(Update.Type),
+        Outcome.Category   = as.character(Outcome.Category),
+        Milestone.Category = as.character(Milestone.Category),
+        CorePillar = dplyr::case_when(
+          Update.Type == "Outcome"   ~ Outcome.Category,
           Update.Type == "Milestone" ~ Milestone.Category,
           TRUE ~ NA_character_
-        )) %>%
-      select(CorePillar) %>%
-      unique() %>%
-      arrange(CorePillar) %>%
-      pull(CorePillar)
+        )
+      ) %>%
+      dplyr::distinct(CorePillar) %>%
+      tidyr::drop_na(CorePillar) %>%
+      dplyr::arrange(CorePillar) %>%
+      dplyr::pull(CorePillar)
+    
     
     pillar_choices <- c("All Core Pillars", all_pillars)
     
@@ -1953,7 +1963,7 @@ server <- function(input, output, session) {
                                               "locality Area: ", Locality
                                             ))
   
-  locality_long %>% print(n = Inf)
+ # locality_long %>% print(n = Inf)
   
   g_locality <- ggplot(locality_long) +
     geom_line(aes(x = Year, y = Amount, group = Locality, color = Locality, text = tooltip_text), linewidth = 2, alpha = .5) +
