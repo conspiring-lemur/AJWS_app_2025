@@ -490,6 +490,34 @@ ui <- page_sidebar(
 
 server <- function(input, output, session) {
   
+  trace_omf <- function(df) {
+    df <- df %>% mutate(Update.Year = as.integer(Update.Year))
+    cat("A raw:", nrow(df), "\n")
+    
+    df1 <- df %>% filter(Update.Type == "Outcome")
+    cat("B outcome only:", nrow(df1), "\n")
+    
+    df2 <- df1 %>% filter(Update.Year == 2024)
+    cat("C year==2024:", nrow(df2), "\n")
+    
+    # If you join to a mapping table anywhere, test it explicitly:
+    # Suppose you have pillar_map or category_map joins:
+    # df3 <- df2 %>% left_join(pillar_map, by = c("Outcome.Category" = "from"))
+    # cat("D after join:", nrow(df3), "\n")
+    # cat("   lost on join:", nrow(df2) - nrow(df3), "\n")
+    # If you *must* keep all OMF rows, this join should be a left_join, not inner_join.
+    
+    # Check for NA-sensitive filters:
+    # Are you doing something like !is.na(Progress) or filtering by input$progress?
+    # Simulate those lines here and compare:
+    # df4 <- df2 %>% filter(!is.na(Progress))
+    # cat("E after !is.na(Progress):", nrow(df4), "\n")
+    
+    invisible(df2)
+  }
+
+  
+  
   withProgress("Starting app...", value = 0,{
     incProgress(0.2, "Loading data...")
     incProgress(0.6, "Building UI")
@@ -2066,6 +2094,9 @@ server <- function(input, output, session) {
     )
   
   output$gms_issue_area <- renderPlotly({ p_issue })
+  
+  
+  trace_omf(omf_raw)x
   
   
 }
