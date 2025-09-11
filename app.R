@@ -1462,16 +1462,16 @@ server <- function(input, output, session) {
   # Matrix of pie slices (some have only one slice)
   pie_matrix <- matrix(
     data = c(
-      30.6,  NA,     # Americas
-      23.8,  NA,     # Africa
-      37.0,  NA,   # Asia + Asia ECM
-      8.5,   NA      # Cross-Regional
+      30.6,     # Americas
+      23.8,     # Africa
+      37.0,   # Asia + Asia ECM
+      8.5      # Cross-Regional
     ),
     nrow = 4,
-    ncol = 2,
+    ncol = 1,
     byrow = TRUE
   )
-  colnames(pie_matrix) <- c("Non-ECM Grants", "ECM Grants")
+  colnames(pie_matrix) <- c("Proportion of Grant Dollars (%)")
   
   # Calculate dynamic sizes
   totals <- rowSums(pie_matrix, na.rm = TRUE)
@@ -1498,6 +1498,8 @@ server <- function(input, output, session) {
         type = "pie",
         width = sizes,
         height = sizes,
+        fillColor = c("goldenrod", "teal", "forestgreen", "grey"),
+        opacity = .5,
         showLabels = FALSE
       ) %>%
       addCircleMarkers(
@@ -1536,7 +1538,7 @@ server <- function(input, output, session) {
   
   world_df <- funding
   
-  africa_countries <- c("DRC", "KENYA", "LIBERIA", "SENEGAL", "UGANDA", "SOUTH AFRICA")
+  africa_countries <- c("DRC", "KENYA", "LIBERIA", "SENEGAL", "UGANDA", "AFRICA CROSS-REGIONAL")
   
   
   africa_data <- world_df %>% filter(Row.Labels %in% africa_countries)
@@ -1545,9 +1547,9 @@ server <- function(input, output, session) {
   
   
   africa_coords <- data.frame(
-    country = c("DRC", "KENYA", "LIBERIA", "SENEGAL", "UGANDA", "SOUTH AFRICA"),
-    lat = c(-2.88, 0.02, 6.3, 14.5, 1.37, -30.56),
-    lng = c(23.65, 37.91, -9.43, -14.5, 32.29, 22.94)
+    country = c("DRC", "KENYA", "LIBERIA", "SENEGAL", "UGANDA", "AFRICA CROSS-REGIONAL"),
+    lat = c(-2.88, 0.02, 6.3, 14.5, 1.37, -2.88),
+    lng = c(23.65, 37.91, -9.43, -14.5, 32.29, 0)
   )
   
   
@@ -1651,7 +1653,7 @@ server <- function(input, output, session) {
   
   # Data frame of values
   
-  asia_countries <- c("BANGLADESH", "BURMA", "CAMBODIA", "INDIA", "SRILANKA", "THAILAND")
+  asia_countries <- c("BANGLADESH", "BURMA", "CAMBODIA", "INDIA", "SRILANKA", "THAILAND", "ASIA CROSS-REGIONAL")
   
   
   asia_data <- world_df %>% filter(Row.Labels %in% asia_countries)
@@ -1660,9 +1662,9 @@ server <- function(input, output, session) {
   
   
   asia_coords <- data.frame(
-    country = c("BANGLADESH", "BURMA", "CAMBODIA", "INDIA", "SRILANKA", "THAILAND"),
-    lat = c(23.7, 21.9, 12.57, 20.59, 7.87, 15.87),
-    lng = c(90.4, 95.9, 104.99, 78.96, 80.77, 100.99)
+    country = c("BANGLADESH", "BURMA", "CAMBODIA", "INDIA", "SRILANKA", "THAILAND", "ASIA CROSS-REGIONAL"),
+    lat = c(23.7, 21.9, 12.57, 20.59, 7.87, 15.87, 15.87),
+    lng = c(90.4, 95.9, 104.99, 78.96, 80.77, 100.99, 90.4)
   )
   
   
@@ -1760,7 +1762,7 @@ server <- function(input, output, session) {
   
   # Data frame of values
   
-  latam_countries <- c("DOMINICAN REPUBLIC", "EL SALVADOR", "GUATEMALA", "HAITI", "MEXICO", "NICARAGUA")
+  latam_countries <- c("DOMINICAN REPUBLIC", "EL SALVADOR", "GUATEMALA", "HAITI", "MEXICO", "NICARAGUA", "LATAM CROSS-REGIONAL")
   
   
   latam_data <- world_df %>% filter(Row.Labels %in% latam_countries)
@@ -1769,9 +1771,9 @@ server <- function(input, output, session) {
   
   
   latam_coords <- data.frame(
-    country = c("DOMINICAN REPUBLIC", "EL SALVADOR", "GUATEMALA", "HAITI", "MEXICO", "NICARAGUA"),
-    lat = c(18.74, 13.79, 15.78, 18.97, 23.63, 12.87),
-    lng = c(-70.16, -88.89, -90.23, -72.29, -102.55, -85.21)
+    country = c("DOMINICAN REPUBLIC", "EL SALVADOR", "GUATEMALA", "HAITI", "MEXICO", "NICARAGUA", "LATAM CROSS-REGIONAL"),
+    lat = c(18.74, 13.79, 15.78, 18.97, 23.63, 12.87, 23.63),
+    lng = c(-70.16, -88.89, -90.23, -72.29, -102.55, -85.21, -90.23)
   )
   
   
