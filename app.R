@@ -2098,7 +2098,7 @@ server <- function(input, output, session) {
   output$gms_issue_area <- renderPlotly({ p_issue })
   
   
-  trace_omf(omf_raw)x
+  trace_omf(omf_raw)
   
   
 }
