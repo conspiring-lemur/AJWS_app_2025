@@ -900,11 +900,24 @@ server <- function(input, output, session) {
                     p("This interactive platform is designed to help you explore metrics and trends across the Outcome Monitoring Form (OMF) and the Grants Management System (GMS)."),
                     tags$ul(
                       tags$li("Use the sidebar to navigate between sections."),
-                      tags$li("Explore heatmaps showing progress and context using filters for Record Type, Core Pillar, and Thematic Area."),
-                      tags$li("Hover over any heatmap cell to see detailed values."),
+                      tags$li("Explore visuals and data through filter for progress, context, Record Type, Core Pillar, and Thematic Areas."),
+                      tags$li("Hover over interactive graphs for notes and text."),
+                      tags$li("Add and edit notes on each page."),
                       tags$li("More features and datasets will be added in future releases.")
                     ),
-                    p("For questions, please contact your Data Team.")
+                    p("For questions, please contact your Data Team."),
+                    br(),
+                    h5("How to Navigate"),
+                    p("Use the ", strong("sidebar navigation panel"), " to move between sections. Each tab provides a different view of OMF and GMS data:"),
+                    tags$ul(
+                      tags$li(strong("OMF Heatmap"), " — Interactive heatmaps of progress and context with filters for Record Type, Core Pillar, Thematic Area, and Country. Hover over cells for details."),
+                      tags$li(strong("OMF Data Explorer"), " — Searchable, filterable table of outcomes and milestones, including progress updates and contextual notes."),
+                      tags$li(strong("OMF Longitudinal"), " — Year-by-year charts tracking outcome and milestone trends across the strategy period."),
+                      tags$li(strong("GMS Dashboard"), " — High-level summaries of grantmaking metrics, including issue-area distributions and program trends."),
+                      tags$li(strong("GMS Mapping"), " — Interactive world map with regional and country-level pies and hover details to visualize grant distributions."),
+                      tags$li(strong("GMS Data Explorer"), " — Detailed GMS records in a structured table with filters for grantee, thematic area, core pillar, and country."),
+                      tags$li(strong("GMS Longitudinal"), " — Multi-year trends in funding, issue areas, and program activity.")
+                    )
              )
            ),
            "OMF Heatmap" = fluidPage(
