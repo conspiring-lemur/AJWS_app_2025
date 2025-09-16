@@ -460,7 +460,7 @@ full_text[,1] <- str_squish(gsub("\n", " ", full_text[,1]))
 
 
 progress_levels <- c("Major Regress", "Moderate Regress", "Minor Regress",
-                     "No Progress",
+                     "No Change",
                      "Minor Progress", "Moderate Progress", "Major Progress")
 
 context_levels <- c("Very unfavorable", "Somewhat unfavorable", "Neutral",
@@ -1327,12 +1327,6 @@ server <- function(input, output, session) {
       filter_parts <- c(filter_parts, input$country_select)
     }
     
-    final_title <- if (length(filter_parts) > 0) {
-      paste("OMF Heatmap –", paste(filter_parts, collapse = " | "))
-    } else {
-      "OMF Heatmap"
-    }
-    
     data <- full_data()
     if (input$record_type_select != "All Record Types") {
       data <- data %>% filter(RecordType == input$record_type_select)
@@ -1349,20 +1343,28 @@ server <- function(input, output, session) {
     total_obs <- nrow(data)
     validate(need(total_obs > 0, "No data available."))
     
+    final_title <- if (length(filter_parts) > 0) {
+      paste("OMF Heatmap (n =", paste0(total_obs, ") –"), paste(filter_parts, collapse = " | "))
+    } else {
+      paste("OMF Heatmap (n =", paste0(total_obs, ")"))
+    }
+      
     heat_df <- data %>%
       count(Progress, Context) %>%
       complete(Progress = factor(progress_levels, levels = progress_levels, ordered = TRUE),
                Context = factor(context_levels, levels = context_levels, ordered = TRUE),
                fill = list(n = 0)) %>%
-      mutate(Percent = n / total_obs)
+      mutate(Percent = n / total_obs,
+             Count = n)
     
     gg <- ggplot(heat_df, aes(x = Context, y = Progress, fill = Percent,
                               text = paste0("Progress: ", Progress, "\n",
                                             "Context: ", Context, "\n",
-                                            "Percent: ", percent(Percent, accuracy = 0.1)))) +
+                                            "Percent: ", percent(Percent, accuracy = 0.1), "\n",
+                                            "Count: ", Count))) +
       geom_tile(color = "white") +
       geom_text(aes(label = percent(Percent, accuracy = 0.1)), size = 3.5) +
-      scale_fill_gradient(low = "#fefcf5", high = ajws_accent, name = "% of total") +
+      scale_fill_gradient(low = "#fefcf5", high = ajws_accent, name = "% of total", labels = percent_format(accuracy = 1)) +
       scale_x_discrete(position = "top") +
       scale_y_discrete(limits = progress_levels) +
       theme_minimal() +
