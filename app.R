@@ -176,18 +176,36 @@ y = "2024"
 gms <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "GMS FY25 1")
 icc <- read.xlsx("FY25 AJWS Data_3JUL25.xlsx", sheet = "ICCs")
 
-gms$Issue.Area.Grantees <- recode(gms$Program.Director.Area, 
+# test <- gms %>% distinct(., Organization.ID, .keep_all = T)
+# 
+# test %>% 
+#   select(Issue.Area.Grantees, Organization.ID) %>% 
+#   group_by(Issue.Area.Grantees, Organization.ID ) %>% 
+#   summarize(n()) %>% 
+#   group_by(Issue.Area.Grantees) %>% 
+#   summarize(n()) %>% 
+#   as.matrix()
+
+gms$Issue.Area.Grantees <- recode(gms$Program.Director.Area,
                                   "Sexual Health and Rights" = "SHR",
                                   "Land Water and Climate Justice" = "LWCJ",
                                   "Disaster Response" = "HR",
                                   "Civil and Political Rights" = "CPR")
 
+gms <- gms %>%  mutate(Issue.Area.Grantees =  case_when(
+                        str_detect(Issue.Area.Grantees, "CPR") ~ "CPR",
+                        str_detect(Issue.Area.Grantees, "^[HR]") ~ "HR",
+                        str_detect(Issue.Area.Grantees, "LWCJ") ~ "LWCJ",
+                        str_detect(Issue.Area.Grantees, "SHR") & str_detect(ECM, "Non-ECM") ~ "SHR (Non-ECM)",
+                        TRUE ~ "SHR (ECM)"))
+                                    
 
 unique_issue_areas <- gms$Issue.Area.Grantees %>% unique
 
 ncol_dashboard <- unique_issue_areas %>% length
 
 gms_nrow_by_issue_area <- gms %>% 
+  # distinct(., Organization.ID, .keep_all = T) %>%
   select(Issue.Area.Grantees, Organization.ID) %>% 
   group_by(Issue.Area.Grantees, Organization.ID ) %>% 
   summarize(n()) %>% 
@@ -195,6 +213,7 @@ gms_nrow_by_issue_area <- gms %>%
   summarize(n()) %>% 
   as.matrix()
 
+gms_nrow_by_issue_area
 
 ## Accompaniment ##
 
