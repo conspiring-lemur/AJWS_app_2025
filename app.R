@@ -957,6 +957,7 @@ server <- function(input, output, session) {
                    h5("📌 Notes"),
                    p("Context & Reporting Factors"),
                    p(HTML("<ul>
+                           <li>Please note, the Heatmap shown on the right will only display records that had a non-missing value for both Progress and Context. If a record was missing either of these values, it will not be included in the total count listed.</li>
                            <li>Fewer countries/strategies after AJWS restructuring.</li>
                            <li>Shrinking civic space and U.S. funding cuts especially affecting SHR & climate justice.</li>
                            <li>LPMT reporting narrowed to major legislative changes.</li></ul>")),
